@@ -10,34 +10,29 @@ const firebaseConfig = {
 const FIREBASE_DB_URL = 'https://cafeteria-sh82-3dea3-default-rtdb.firebaseio.com';
 const FIREBASE_SHARED_NODE = 'cafeteria_shared';
 const FIREBASE_TOKEN = 'lnOKi5riEL7Rd6O6XQbqDFkiPzvmmaa7X7L08Zpc';
-const firebaseSdkAvailable = Boolean(window.firebase);
-const firebaseApp = firebaseSdkAvailable ? (window.firebase.apps.length ? window.firebase.apps[0] : window.firebase.initializeApp(firebaseConfig)) : null;
-const firebaseDb = firebaseApp ? firebaseApp.database() : null;
-const firebaseStorage = firebaseApp ? firebaseApp.storage() : null;
-const realtimeRootRef = firebaseDb ? firebaseDb.ref(FIREBASE_SHARED_NODE) : null;
+if (!window.firebase) throw new Error('Firebase SDK no cargó. Revisa index.html y la carga de red del navegador.');
+const firebaseApp = window.firebase.apps.length ? window.firebase.apps[0] : window.firebase.initializeApp(firebaseConfig);
+const firebaseDb = firebaseApp.database();
+const firebaseStorage = firebaseApp.storage();
+const realtimeRootRef = firebaseDb.ref(FIREBASE_SHARED_NODE);
 const SESSION_STORAGE_KEY = 'cafeteria_current_session';
-let firebaseBootstrapError = firebaseSdkAvailable ? '' : 'Firebase SDK no cargó en este navegador. Se activó modo local de contingencia.';
+const AUTH_USERS_PATH = `${FIREBASE_SHARED_NODE}/usuarios`;
+const SALES_PATH = `${FIREBASE_SHARED_NODE}/ventas`;
 
-function ref(target, path = '') { return target && path ? target.ref(path) : target; }
-function get(reference) { return reference ? reference.once('value') : Promise.resolve({ exists: () => false, val: () => null }); }
-function set(reference, value) { return reference ? reference.set(value) : Promise.resolve(value); }
-function update(reference, value) { return reference ? reference.update(value) : Promise.resolve(value); }
-function push(reference, value) { if (!reference) return Promise.resolve({ key: uid() }); const child = reference.push(); return value === undefined ? child : child.set(value).then(() => child); }
-function remove(reference) { return reference ? reference.remove() : Promise.resolve(); }
-function runTransaction(reference, updater) {
-  if (!reference) {
-    const next = updater(null);
-    return Promise.resolve({ committed: true, snapshot: { val: () => next } });
-  }
-  return new Promise((resolve, reject) => { reference.transaction((current) => updater(current), (error, committed, snapshot) => error ? reject(error) : resolve({ committed, snapshot }), false); });
-}
-function onChildAdded(reference, cb) { return reference ? reference.on('child_added', cb) : null; }
-function onChildChanged(reference, cb) { return reference ? reference.on('child_changed', cb) : null; }
-function onChildRemoved(reference, cb) { return reference ? reference.on('child_removed', cb) : null; }
-function storageRef(storage, path = '') { return storage ? storage.ref(path) : null; }
-function uploadBytesResumable(reference, blob, metadata) { return reference ? reference.put(blob, metadata) : null; }
-function getDownloadURL(reference) { return reference ? reference.getDownloadURL() : Promise.resolve(''); }
-function deleteObject(reference) { return reference ? reference.delete() : Promise.resolve(); }
+function ref(target, path = '') { return path ? target.ref(path) : target; }
+function get(reference) { return reference.once('value'); }
+function set(reference, value) { return reference.set(value); }
+function update(reference, value) { return reference.update(value); }
+function push(reference, value) { const child = reference.push(); return value === undefined ? child : child.set(value).then(() => child); }
+function remove(reference) { return reference.remove(); }
+function runTransaction(reference, updater) { return new Promise((resolve, reject) => { reference.transaction((current) => updater(current), (error, committed, snapshot) => error ? reject(error) : resolve({ committed, snapshot }), false); }); }
+function onChildAdded(reference, cb) { return reference.on('child_added', cb); }
+function onChildChanged(reference, cb) { return reference.on('child_changed', cb); }
+function onChildRemoved(reference, cb) { return reference.on('child_removed', cb); }
+function storageRef(storage, path = '') { return storage.ref(path); }
+function uploadBytesResumable(reference, blob, metadata) { return reference.put(blob, metadata); }
+function getDownloadURL(reference) { return reference.getDownloadURL(); }
+function deleteObject(reference) { return reference.delete(); }
 
 const defaultUiSettings = { title1:'Mi Cafetería', title2:'Pantalla principal', posTitle:'POS Cafetería', posSubtitle:'Ventas, productos, deudas, cierres y resumen diario.', logoDataUrl:'', accentColor:'#1f7a5c', bgColor:'#f7f7fb', cardColor:'#ffffff', logoSize:120, title1Size:32, title2Size:16, title1Font:'Inter, system-ui, sans-serif', title2Font:'Inter, system-ui, sans-serif', title1Color:'#1d2530', title2Color:'#6f7a86', posLogoSize:56, ordersEnabled:true };
 const state = {
@@ -69,7 +64,7 @@ const imagePreviewCache = {};
 const imageLoadInFlight = {};
 const imageMissingRefs = {};
 let scheduledImageUiRefresh = 0;
-let firebaseReady = Boolean(firebaseDb);
+let firebaseReady = true;
 let realtimeBindingStarted = false;
 const collectionBindings = new Map();
 let lastPersistedState = null;
@@ -580,7 +575,7 @@ function snapshotPayload() {
 }
 
 async function syncToCloud() {
-  if (!firebaseReady || !realtimeRootRef) return snapshotPayload();
+  if (!realtimeRootRef) throw new Error('Firebase no inicializado.');
   const payload = snapshotPayload();
   const previous = lastPersistedState || {};
   const patch = {};
@@ -681,21 +676,37 @@ async function reserveNextOrderNumber(cashBoxId) {
 function persist(options = {}) {
   if (state.currentUser && !validateSessionPolicy({ silent: false })) return;
   if (options.sync === false) return;
-  if (!firebaseReady) return;
+
   scheduleCloudSync(document.hidden ? 450 : 120);
+}
+
+async function ensureFirebaseSeedData() {
+  const adminAuthRef = ref(firebaseDb, `${AUTH_USERS_PATH}/admin`);
+  const adminAuthSnap = await get(adminAuthRef);
+  if (!adminAuthSnap.exists()) {
+    await set(adminAuthRef, { password: '5432', role: 'admin', enabled: true, createdAt: new Date().toISOString() });
+  }
+  const adminUserRef = ref(firebaseDb, `${FIREBASE_SHARED_NODE}/users/admin`);
+  const adminUserSnap = await get(adminUserRef);
+  if (!adminUserSnap.exists()) {
+    await set(adminUserRef, {
+      id: 'admin',
+      username: 'admin',
+      password: '5432',
+      role: 'admin',
+      enabled: true,
+      permissions: defaultPermissions(),
+      createdBy: 'system',
+      createdAt: new Date().toISOString(),
+      lastActivityAt: 0,
+      lastLogoutAt: 0
+    });
+  }
 }
 
 async function initializeRealtimeState() {
   if (realtimeBindingStarted) return;
   realtimeBindingStarted = true;
-  if (!firebaseDb || !realtimeRootRef) {
-    ensureUsers();
-    ensureSeedData();
-    normalizeCloudSettings();
-    firebaseReady = false;
-    handleRemoteMutation();
-    return;
-  }
   const rootSnap = await get(realtimeRootRef);
   if (!rootSnap.exists()) {
     ensureUsers();
@@ -703,6 +714,7 @@ async function initializeRealtimeState() {
     normalizeCloudSettings();
     await set(realtimeRootRef, snapshotPayload());
   }
+  await ensureFirebaseSeedData();
   const registerCollection = (key, target, { transformIn = (v) => v, sortKey = 'createdAt' } = {}) => {
     const collectionRef = ref(firebaseDb, `${FIREBASE_SHARED_NODE}/${key}`);
     const syncTarget = async () => {
@@ -814,9 +826,7 @@ function persistCurrentSession() {
 
 function availableUsersForLogin() {
   ensureUsers();
-  const users = Array.isArray(state.users) ? state.users : [];
-  if (!users.find((u) => u.username === 'admin')) users.push({ username: 'admin', password: '5432', permissions: defaultPermissions(), enabled: true });
-  return users;
+  return Array.isArray(state.users) ? state.users : [];
 }
 
 function currentUserRecord() {
@@ -3700,18 +3710,22 @@ function showLogin() {
     return;
   }
   loginScreen?.classList.remove('hidden');
+  if (loginScreen) loginScreen.style.display = 'block';
   homeScreen?.classList.add('hidden');
+  if (homeScreen) homeScreen.style.display = 'none';
   posScreen?.classList.add('hidden');
   stockScreen?.classList.add('hidden');
   warehouseScreen?.classList.add('hidden');
   if (loginUserInput) loginUserInput.value = '';
   if (loginPassInput) loginPassInput.value = '';
   if (!state.currentUser) persistCurrentSession();
-  setMsg(loginMessage, firebaseBootstrapError || '');
+  setMsg(loginMessage, '');
 }
 function showHome() {
   loginScreen?.classList.add('hidden');
+  if (loginScreen) loginScreen.style.display = 'none';
   homeScreen?.classList.remove('hidden');
+  if (homeScreen) homeScreen.style.display = 'block';
   posScreen?.classList.add('hidden');
   stockScreen?.classList.add('hidden');
   warehouseScreen?.classList.add('hidden');
@@ -3744,15 +3758,20 @@ async function handleLogin() {
   console.info('LOGIN INICIADO', { username, firebaseReady, usersLoaded: Array.isArray(state.users) ? state.users.length : 0 });
   if (!username || !password) return setMsg(loginMessage, 'Ingresa usuario y contraseña para continuar.', false);
   try {
-    setMsg(loginMessage, 'Validando acceso...');
+    setMsg(loginMessage, 'Validando acceso en Firebase...');
     await pullFromCloudWithTimeout(2500);
-    const users = availableUsersForLogin();
-    const user = users.find((u) => String(u.username || '').trim() === username && String(u.password || '') === password);
+    await ensureFirebaseSeedData();
+    const authSnap = await get(ref(firebaseDb, `${AUTH_USERS_PATH}/${username}`));
+    if (!authSnap.exists()) throw new Error('Usuario no existe');
+    const authUser = authSnap.val() || {};
+    if (String(authUser.password || '') !== password) throw new Error('Contraseña incorrecta');
+    let user = state.users.find((u) => String(u.username || '') === username);
     if (!user) {
-      console.warn('[auth] credenciales inválidas', { username, usersAvailable: users.map((u) => u.username) });
-      return setMsg(loginMessage, 'Usuario o contraseña incorrectos.', false);
+      user = { username, password: authUser.password, role: authUser.role || 'admin', enabled: authUser.enabled !== false, permissions: defaultPermissions(), createdBy: 'firebase', createdAt: new Date().toISOString(), lastActivityAt: 0, lastLogoutAt: 0 };
+      state.users = [user, ...(state.users || []).filter((u) => u.username !== username)];
+      await set(ref(firebaseDb, `${FIREBASE_SHARED_NODE}/users/${username}`), { id: username, ...user });
     }
-    if (user.enabled === false) return setMsg(loginMessage, 'Usuario inhabilitado por administrador.', false);
+    if (user.enabled === false) throw new Error('Usuario inhabilitado por administrador.');
     const now = Date.now();
     user.lastActivityAt = now;
     state.currentUser = { username: user.username, loginAt: now, lastActivityAt: now };
@@ -3761,20 +3780,24 @@ async function handleLogin() {
     if (loginUserInput) loginUserInput.value = '';
     if (loginPassInput) loginPassInput.value = '';
     setMsg(loginMessage, 'Ingreso exitoso.');
-    console.info('[auth] login exitoso', { username: user.username, currentUser: state.currentUser });
+    console.info('LOGIN EXITOSO', { username: user.username, currentUser: state.currentUser });
     markUserActivity('login');
+    await update(ref(firebaseDb, `${FIREBASE_SHARED_NODE}/users/${username}`), { lastActivityAt: now, lastLoginAt: now });
     persist();
+    if (loginScreen) loginScreen.style.display = 'none';
+    if (homeScreen) homeScreen.style.display = 'block';
     maybeForceLogoutFromClosure();
     if (!state.currentUser) return;
     renderOrdersVisibility();
     renderHomeActions();
+    navStack = ['home'];
     navigateTo('home', { replace: true });
     showHome();
     renderSalesHistory();
     if (!getActiveCashBox()) setMsg(homeMessage, 'La caja está cerrada. Espera a que un usuario autorizado la abra.', false);
   } catch (error) {
     console.error('[auth] login error', error);
-    setMsg(loginMessage, `No se pudo iniciar sesión: ${error?.message || error}`, false);
+    setMsg(loginMessage, String(error?.message || error || 'No se pudo iniciar sesión.'), false);
   }
 }
 
@@ -3955,29 +3978,6 @@ async function closeCashSession() {
 }
 
 async function commitSaleAtomically({ sale, cartItems, activeCashBoxId, stockEnabled }) {
-  if (!firebaseDb || !firebaseReady) {
-    const nextOrder = Number(state.orderCounters?.[activeCashBoxId] || 0) + 1;
-    state.orderCounters = state.orderCounters || {};
-    state.orderCounters[activeCashBoxId] = nextOrder;
-    const committedSale = { ...sale, orderNumber: nextOrder };
-    if (stockEnabled) {
-      for (const item of cartItems) {
-        const product = state.products.find((p) => p.id === item.id);
-        if (!product || Number(product.stockCurrent || 0) < Number(item.qty || 0)) throw new Error(`Stock insuficiente para ${item.name}.`);
-        product.stockCurrent = Number(product.stockCurrent || 0) - Number(item.qty || 0);
-        if (Array.isArray(product.combo) && product.combo.length) {
-          const req = comboComponentRequirements(product, item.qty);
-          for (const [componentId, neededQty] of req.entries()) {
-            const component = state.products.find((p) => p.id === componentId);
-            if (!component || Number(component.stockCurrent || 0) < Number(neededQty || 0)) throw new Error(`Stock insuficiente para componente ${component?.name || componentId}.`);
-            component.stockCurrent = Number(component.stockCurrent || 0) - Number(neededQty || 0);
-          }
-        }
-      }
-    }
-    state.sales = [committedSale, ...(state.sales || [])];
-    return committedSale;
-  }
   const rootSaleRef = ref(firebaseDb, FIREBASE_SHARED_NODE);
   const result = await runTransaction(rootSaleRef, (root) => {
     const data = root && typeof root === 'object' ? root : {};
@@ -4078,7 +4078,8 @@ async function registerSale() {
   const saleDraft = { id: uid(), cashBoxId: activeCashBoxId, orderNumber: null, createdAt: new Date().toISOString(), user: state.currentUser.username, items: state.currentCart.map((i) => ({ ...i })), total: totals.final, payment, breakdown, debtAmount, debtorId, paymentStatus: debtAmount > 0 ? 'pendiente' : 'realizado', orderStatus: 'pendiente', deliveryItems, carryOverDebt: false };
   const sale = await commitSaleAtomically({ sale: saleDraft, cartItems: state.currentCart.map((i) => ({ ...i })), activeCashBoxId, stockEnabled: isStockEnabled() });
   sale.invoiceSnapshot = buildInvoiceData(sale);
-  if (firebaseDb && firebaseReady) await update(ref(firebaseDb, `${FIREBASE_SHARED_NODE}/sales/${sale.id}`), { invoiceSnapshot: sale.invoiceSnapshot, updatedAt: Date.now() });
+  await update(ref(firebaseDb, `${FIREBASE_SHARED_NODE}/sales/${sale.id}`), { invoiceSnapshot: sale.invoiceSnapshot, updatedAt: Date.now() });
+  await set(ref(firebaseDb, `${SALES_PATH}/${sale.id}`), { ...sale, invoiceSnapshot: sale.invoiceSnapshot, updatedAt: Date.now() });
   applyWarehouseImpactFromSaleItems(sale.items, { reverse: false, saleId: `#${orderNumberLabel(sale.orderNumber)}` });
   state.currentCart = [];
   await syncToCloud();
@@ -5378,8 +5379,7 @@ async function bootstrap() {
   window.addEventListener('hashchange', () => { if (applyingRoute) return; applyRoute(); });
   try {
     await initializeRealtimeState();
-    if (firebaseReady) console.info('[firebase] conexión validada', { url: FIREBASE_DB_URL, node: FIREBASE_SHARED_NODE });
-    else console.warn('[firebase] modo local de contingencia activo');
+    console.info('[firebase] conexión validada', { url: FIREBASE_DB_URL, node: FIREBASE_SHARED_NODE });
   } catch (error) {
     console.error('[firebase] inicialización falló', error);
     setMsg(loginMessage, `Firebase no respondió correctamente: ${error.message || error}`, false);
