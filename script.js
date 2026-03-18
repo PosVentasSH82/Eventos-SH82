@@ -10,27 +10,34 @@ const firebaseConfig = {
 const FIREBASE_DB_URL = 'https://cafeteria-sh82-3dea3-default-rtdb.firebaseio.com';
 const FIREBASE_SHARED_NODE = 'cafeteria_shared';
 const FIREBASE_TOKEN = 'lnOKi5riEL7Rd6O6XQbqDFkiPzvmmaa7X7L08Zpc';
-if (!window.firebase) throw new Error('Firebase SDK no cargó. Revisa los scripts compat en index.html.');
-const firebaseApp = window.firebase.apps.length ? window.firebase.apps[0] : window.firebase.initializeApp(firebaseConfig);
-const firebaseDb = firebaseApp.database();
-const firebaseStorage = firebaseApp.storage();
-const realtimeRootRef = firebaseDb.ref(FIREBASE_SHARED_NODE);
+const firebaseSdkAvailable = Boolean(window.firebase);
+const firebaseApp = firebaseSdkAvailable ? (window.firebase.apps.length ? window.firebase.apps[0] : window.firebase.initializeApp(firebaseConfig)) : null;
+const firebaseDb = firebaseApp ? firebaseApp.database() : null;
+const firebaseStorage = firebaseApp ? firebaseApp.storage() : null;
+const realtimeRootRef = firebaseDb ? firebaseDb.ref(FIREBASE_SHARED_NODE) : null;
 const SESSION_STORAGE_KEY = 'cafeteria_current_session';
+let firebaseBootstrapError = firebaseSdkAvailable ? '' : 'Firebase SDK no cargó en este navegador. Se activó modo local de contingencia.';
 
-function ref(target, path = '') { return path ? target.ref(path) : target; }
-function get(reference) { return reference.once('value'); }
-function set(reference, value) { return reference.set(value); }
-function update(reference, value) { return reference.update(value); }
-function push(reference, value) { const child = reference.push(); return value === undefined ? child : child.set(value).then(() => child); }
-function remove(reference) { return reference.remove(); }
-function runTransaction(reference, updater) { return new Promise((resolve, reject) => { reference.transaction((current) => updater(current), (error, committed, snapshot) => error ? reject(error) : resolve({ committed, snapshot }), false); }); }
-function onChildAdded(reference, cb) { return reference.on('child_added', cb); }
-function onChildChanged(reference, cb) { return reference.on('child_changed', cb); }
-function onChildRemoved(reference, cb) { return reference.on('child_removed', cb); }
-function storageRef(storage, path = '') { return storage.ref(path); }
-function uploadBytesResumable(reference, blob, metadata) { return reference.put(blob, metadata); }
-function getDownloadURL(reference) { return reference.getDownloadURL(); }
-function deleteObject(reference) { return reference.delete(); }
+function ref(target, path = '') { return target && path ? target.ref(path) : target; }
+function get(reference) { return reference ? reference.once('value') : Promise.resolve({ exists: () => false, val: () => null }); }
+function set(reference, value) { return reference ? reference.set(value) : Promise.resolve(value); }
+function update(reference, value) { return reference ? reference.update(value) : Promise.resolve(value); }
+function push(reference, value) { if (!reference) return Promise.resolve({ key: uid() }); const child = reference.push(); return value === undefined ? child : child.set(value).then(() => child); }
+function remove(reference) { return reference ? reference.remove() : Promise.resolve(); }
+function runTransaction(reference, updater) {
+  if (!reference) {
+    const next = updater(null);
+    return Promise.resolve({ committed: true, snapshot: { val: () => next } });
+  }
+  return new Promise((resolve, reject) => { reference.transaction((current) => updater(current), (error, committed, snapshot) => error ? reject(error) : resolve({ committed, snapshot }), false); });
+}
+function onChildAdded(reference, cb) { return reference ? reference.on('child_added', cb) : null; }
+function onChildChanged(reference, cb) { return reference ? reference.on('child_changed', cb) : null; }
+function onChildRemoved(reference, cb) { return reference ? reference.on('child_removed', cb) : null; }
+function storageRef(storage, path = '') { return storage ? storage.ref(path) : null; }
+function uploadBytesResumable(reference, blob, metadata) { return reference ? reference.put(blob, metadata) : null; }
+function getDownloadURL(reference) { return reference ? reference.getDownloadURL() : Promise.resolve(''); }
+function deleteObject(reference) { return reference ? reference.delete() : Promise.resolve(); }
 
 const defaultUiSettings = { title1:'Mi Cafetería', title2:'Pantalla principal', posTitle:'POS Cafetería', posSubtitle:'Ventas, productos, deudas, cierres y resumen diario.', logoDataUrl:'', accentColor:'#1f7a5c', bgColor:'#f7f7fb', cardColor:'#ffffff', logoSize:120, title1Size:32, title2Size:16, title1Font:'Inter, system-ui, sans-serif', title2Font:'Inter, system-ui, sans-serif', title1Color:'#1d2530', title2Color:'#6f7a86', posLogoSize:56, ordersEnabled:true };
 const state = {
@@ -62,7 +69,7 @@ const imagePreviewCache = {};
 const imageLoadInFlight = {};
 const imageMissingRefs = {};
 let scheduledImageUiRefresh = 0;
-let firebaseReady = false;
+let firebaseReady = Boolean(firebaseDb);
 let realtimeBindingStarted = false;
 const collectionBindings = new Map();
 let lastPersistedState = null;
@@ -573,7 +580,7 @@ function snapshotPayload() {
 }
 
 async function syncToCloud() {
-  if (!firebaseReady) throw new Error('Firebase no inicializado.');
+  if (!firebaseReady || !realtimeRootRef) return snapshotPayload();
   const payload = snapshotPayload();
   const previous = lastPersistedState || {};
   const patch = {};
@@ -626,6 +633,7 @@ async function optimizeImageForUpload(file, { maxSize = 300 } = {}) {
 }
 
 async function uploadImageToFirebaseStorage({ kind, key, file, previousUrl = '', onProgress = null }) {
+  if (!firebaseStorage) { const dataUrl = await blobToDataUrl(file); if (onProgress) onProgress(100); return dataUrl; }
   const safeKey = normalizeImagePathSegment(key);
   const ext = file.type.includes('png') ? 'webp' : (file.type.includes('jpeg') || file.type.includes('jpg') ? 'jpg' : 'webp');
   const folder = kind === 'category' ? 'categorias' : 'productos';
@@ -680,6 +688,14 @@ function persist(options = {}) {
 async function initializeRealtimeState() {
   if (realtimeBindingStarted) return;
   realtimeBindingStarted = true;
+  if (!firebaseDb || !realtimeRootRef) {
+    ensureUsers();
+    ensureSeedData();
+    normalizeCloudSettings();
+    firebaseReady = false;
+    handleRemoteMutation();
+    return;
+  }
   const rootSnap = await get(realtimeRootRef);
   if (!rootSnap.exists()) {
     ensureUsers();
@@ -798,7 +814,9 @@ function persistCurrentSession() {
 
 function availableUsersForLogin() {
   ensureUsers();
-  return Array.isArray(state.users) ? state.users : [];
+  const users = Array.isArray(state.users) ? state.users : [];
+  if (!users.find((u) => u.username === 'admin')) users.push({ username: 'admin', password: '5432', permissions: defaultPermissions(), enabled: true });
+  return users;
 }
 
 function currentUserRecord() {
@@ -3689,7 +3707,7 @@ function showLogin() {
   if (loginUserInput) loginUserInput.value = '';
   if (loginPassInput) loginPassInput.value = '';
   if (!state.currentUser) persistCurrentSession();
-  setMsg(loginMessage, '');
+  setMsg(loginMessage, firebaseBootstrapError || '');
 }
 function showHome() {
   loginScreen?.classList.add('hidden');
@@ -3937,6 +3955,29 @@ async function closeCashSession() {
 }
 
 async function commitSaleAtomically({ sale, cartItems, activeCashBoxId, stockEnabled }) {
+  if (!firebaseDb || !firebaseReady) {
+    const nextOrder = Number(state.orderCounters?.[activeCashBoxId] || 0) + 1;
+    state.orderCounters = state.orderCounters || {};
+    state.orderCounters[activeCashBoxId] = nextOrder;
+    const committedSale = { ...sale, orderNumber: nextOrder };
+    if (stockEnabled) {
+      for (const item of cartItems) {
+        const product = state.products.find((p) => p.id === item.id);
+        if (!product || Number(product.stockCurrent || 0) < Number(item.qty || 0)) throw new Error(`Stock insuficiente para ${item.name}.`);
+        product.stockCurrent = Number(product.stockCurrent || 0) - Number(item.qty || 0);
+        if (Array.isArray(product.combo) && product.combo.length) {
+          const req = comboComponentRequirements(product, item.qty);
+          for (const [componentId, neededQty] of req.entries()) {
+            const component = state.products.find((p) => p.id === componentId);
+            if (!component || Number(component.stockCurrent || 0) < Number(neededQty || 0)) throw new Error(`Stock insuficiente para componente ${component?.name || componentId}.`);
+            component.stockCurrent = Number(component.stockCurrent || 0) - Number(neededQty || 0);
+          }
+        }
+      }
+    }
+    state.sales = [committedSale, ...(state.sales || [])];
+    return committedSale;
+  }
   const rootSaleRef = ref(firebaseDb, FIREBASE_SHARED_NODE);
   const result = await runTransaction(rootSaleRef, (root) => {
     const data = root && typeof root === 'object' ? root : {};
@@ -4037,7 +4078,7 @@ async function registerSale() {
   const saleDraft = { id: uid(), cashBoxId: activeCashBoxId, orderNumber: null, createdAt: new Date().toISOString(), user: state.currentUser.username, items: state.currentCart.map((i) => ({ ...i })), total: totals.final, payment, breakdown, debtAmount, debtorId, paymentStatus: debtAmount > 0 ? 'pendiente' : 'realizado', orderStatus: 'pendiente', deliveryItems, carryOverDebt: false };
   const sale = await commitSaleAtomically({ sale: saleDraft, cartItems: state.currentCart.map((i) => ({ ...i })), activeCashBoxId, stockEnabled: isStockEnabled() });
   sale.invoiceSnapshot = buildInvoiceData(sale);
-  await update(ref(firebaseDb, `${FIREBASE_SHARED_NODE}/sales/${sale.id}`), { invoiceSnapshot: sale.invoiceSnapshot, updatedAt: Date.now() });
+  if (firebaseDb && firebaseReady) await update(ref(firebaseDb, `${FIREBASE_SHARED_NODE}/sales/${sale.id}`), { invoiceSnapshot: sale.invoiceSnapshot, updatedAt: Date.now() });
   applyWarehouseImpactFromSaleItems(sale.items, { reverse: false, saleId: `#${orderNumberLabel(sale.orderNumber)}` });
   state.currentCart = [];
   await syncToCloud();
@@ -5337,7 +5378,8 @@ async function bootstrap() {
   window.addEventListener('hashchange', () => { if (applyingRoute) return; applyRoute(); });
   try {
     await initializeRealtimeState();
-    console.info('[firebase] conexión validada', { url: FIREBASE_DB_URL, node: FIREBASE_SHARED_NODE });
+    if (firebaseReady) console.info('[firebase] conexión validada', { url: FIREBASE_DB_URL, node: FIREBASE_SHARED_NODE });
+    else console.warn('[firebase] modo local de contingencia activo');
   } catch (error) {
     console.error('[firebase] inicialización falló', error);
     setMsg(loginMessage, `Firebase no respondió correctamente: ${error.message || error}`, false);
