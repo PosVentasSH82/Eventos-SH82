@@ -1,73 +1,41 @@
-const firebaseConfig = {
-  apiKey: 'AIzaSyDj7CUA6ZojlG0lFRL3MpLt1YK3rHYIeLo',
-  authDomain: 'cafeteria-sh82-3dea3.firebaseapp.com',
-  databaseURL: 'https://cafeteria-sh82-3dea3-default-rtdb.firebaseio.com',
-  projectId: 'cafeteria-sh82-3dea3',
-  storageBucket: 'cafeteria-sh82-3dea3.firebasestorage.app',
-  messagingSenderId: '221296090484',
-  appId: '1:221296090484:web:4120beb522d3732cb5e021'
-};
-const FIREBASE_DB_URL = 'https://cafeteria-sh82-3dea3-default-rtdb.firebaseio.com';
-const FIREBASE_SHARED_NODE = 'cafeteria_shared';
-const FIREBASE_TOKEN = 'lnOKi5riEL7Rd6O6XQbqDFkiPzvmmaa7X7L08Zpc';
-if (!window.firebase) throw new Error('Firebase SDK no cargó. Revisa index.html y la carga de red del navegador.');
-const firebaseApp = window.firebase.apps.length ? window.firebase.apps[0] : window.firebase.initializeApp(firebaseConfig);
-const firebaseDb = firebaseApp.database();
-const firebaseStorage = firebaseApp.storage();
-const realtimeRootRef = firebaseDb.ref(FIREBASE_SHARED_NODE);
-const SESSION_STORAGE_KEY = 'cafeteria_current_session';
-const AUTH_USERS_PATH = `${FIREBASE_SHARED_NODE}/usuarios`;
-const SALES_PATH = `${FIREBASE_SHARED_NODE}/ventas`;
-
-function ref(target, path = '') { return path ? target.ref(path) : target; }
-function get(reference) { return reference.once('value'); }
-function set(reference, value) { return reference.set(value); }
-function update(reference, value) { return reference.update(value); }
-function push(reference, value) { const child = reference.push(); return value === undefined ? child : child.set(value).then(() => child); }
-function remove(reference) { return reference.remove(); }
-function runTransaction(reference, updater) { return new Promise((resolve, reject) => { reference.transaction((current) => updater(current), (error, committed, snapshot) => error ? reject(error) : resolve({ committed, snapshot }), false); }); }
-function onChildAdded(reference, cb) { return reference.on('child_added', cb); }
-function onChildChanged(reference, cb) { return reference.on('child_changed', cb); }
-function onChildRemoved(reference, cb) { return reference.on('child_removed', cb); }
-function storageRef(storage, path = '') { return storage.ref(path); }
-function uploadBytesResumable(reference, blob, metadata) { return reference.put(blob, metadata); }
-function getDownloadURL(reference) { return reference.getDownloadURL(); }
-function deleteObject(reference) { return reference.delete(); }
-
-const defaultUiSettings = { title1:'Mi Cafetería', title2:'Pantalla principal', posTitle:'POS Cafetería', posSubtitle:'Ventas, productos, deudas, cierres y resumen diario.', logoDataUrl:'', accentColor:'#1f7a5c', bgColor:'#f7f7fb', cardColor:'#ffffff', logoSize:120, title1Size:32, title2Size:16, title1Font:'Inter, system-ui, sans-serif', title2Font:'Inter, system-ui, sans-serif', title1Color:'#1d2530', title2Color:'#6f7a86', posLogoSize:56, ordersEnabled:true };
 const state = {
-  products: [],
-  sales: [],
-  deletedSales: [],
-  cashClosings: [],
-  cashSession: null,
-  users: [],
-  currentUser: (() => { try { return JSON.parse(sessionStorage.getItem(SESSION_STORAGE_KEY) || 'null'); } catch { return null; } })(),
-  settings: { ...defaultUiSettings },
-  categories: [],
-  people: [],
-  stockConfig: { enabled:false, min:0 },
-  queuedOrders: [],
-  removedPeopleIds: [],
-  userSalesModes: {},
-  touchUiConfigByUser: {},
-  categoryImages: {},
-  orderCounters: {},
-  deletedRecordIds: { cashClosings: [], sales: [] }
+  products: JSON.parse(localStorage.getItem('cafeteria_products') || '[]'),
+  sales: JSON.parse(localStorage.getItem('cafeteria_sales') || '[]'),
+  deletedSales: JSON.parse(localStorage.getItem('cafeteria_deleted_sales') || '[]'),
+  cashClosings: JSON.parse(localStorage.getItem('cafeteria_cash_closings') || '[]'),
+  cashSession: JSON.parse(localStorage.getItem('cafeteria_cash_session') || 'null'),
+  users: JSON.parse(localStorage.getItem('cafeteria_users') || '[]'),
+  currentUser: JSON.parse(localStorage.getItem('cafeteria_current_user') || 'null'),
+  settings: JSON.parse(localStorage.getItem('cafeteria_settings') || '{"title1":"Mi Cafetería","title2":"Pantalla principal","posTitle":"POS Cafetería","posSubtitle":"Ventas, productos, deudas, cierres y resumen diario.","logoDataUrl":"","accentColor":"#1f7a5c","bgColor":"#f7f7fb","cardColor":"#ffffff","logoSize":120,"title1Size":32,"title2Size":16,"title1Font":"Inter, system-ui, sans-serif","title2Font":"Inter, system-ui, sans-serif","title1Color":"#1d2530","title2Color":"#6f7a86","posLogoSize":56,"ordersEnabled":true}'),
+  categories: JSON.parse(localStorage.getItem('cafeteria_categories') || '[]'),
+  people: JSON.parse(localStorage.getItem('cafeteria_people') || '[]'),
+  stockConfig: JSON.parse(localStorage.getItem('cafeteria_stock_config') || '{"enabled":false,"min":0}'),
+  stockWriteOffs: JSON.parse(localStorage.getItem('cafeteria_stock_writeoffs') || '[]'),
+  queuedOrders: JSON.parse(localStorage.getItem('cafeteria_queued_orders') || '[]'),
+  removedPeopleIds: JSON.parse(localStorage.getItem('cafeteria_removed_people_ids') || '[]'),
+  userSalesModes: JSON.parse(localStorage.getItem('cafeteria_user_sales_modes') || '{}'),
+  touchUiConfigByUser: JSON.parse(localStorage.getItem('cafeteria_touch_ui_config_by_user') || '{}'),
+  categoryImages: JSON.parse(localStorage.getItem('cafeteria_category_images') || '{}'),
+  orderCounters: JSON.parse(localStorage.getItem('cafeteria_order_counters') || '{}'),
+  deletedRecordIds: JSON.parse(localStorage.getItem('cafeteria_deleted_record_ids') || '{"cashClosings":[],"sales":[],"products":[],"categories":[]}'),
+  subcategories: JSON.parse(localStorage.getItem('cafeteria_subcategories') || '{}'),
+  generalCash: JSON.parse(localStorage.getItem('cafeteria_general_cash') || '{"efectivo":0,"qr":0,"estado":"CERRADA","openedAt":"","closedAt":"","openedBy":"","closedBy":"","updatedAt":0}'),
+  generalClosings: JSON.parse(localStorage.getItem('cafeteria_general_closings') || '[]'),
+  cloudModuleMeta: JSON.parse(localStorage.getItem('cafeteria_cloud_module_meta') || '{}'),
+  moduleHydration: JSON.parse(localStorage.getItem('cafeteria_module_hydration') || '{}')
 };
 
 let sessionWatchInterval = null;
 const SESSION_INACTIVITY_LIMIT_MS = 3 * 60 * 60 * 1000;
 const MAX_IMAGE_UPLOAD_BYTES = Number.POSITIVE_INFINITY;
 const imageUploadStatus = { product: {}, category: {} };
+const IMAGE_DB_NAME = 'cafeteria_images_db';
+const IMAGE_DB_STORE = 'images';
 const imagePreviewCache = {};
 const imageLoadInFlight = {};
 const imageMissingRefs = {};
+let imageDbPromise = null;
 let scheduledImageUiRefresh = 0;
-let firebaseReady = true;
-let realtimeBindingStarted = false;
-const collectionBindings = new Map();
-let lastPersistedState = null;
 
 const $ = (id) => document.getElementById(id);
 const loginScreen = $('loginScreen');
@@ -258,6 +226,7 @@ const backFromStockBtn = $('backFromStockBtn');
 const productForm = $('productForm');
 const productCategory = $('productCategory');
 const productName = $('productName');
+const productCost = $('productCost');
 const productPrice = $('productPrice');
 const productsTable = $('productsTable');
 const productListCard = $('productListCard');
@@ -291,6 +260,7 @@ const summaryTotal = $('summaryTotal');
 const summaryCashDetail = $('summaryCashDetail');
 const summaryQrDetail = $('summaryQrDetail');
 const summaryBox = $('summaryBox');
+const summaryDebtDay = $('summaryDebtDay');
 const summaryDebt = $('summaryDebt');
 const summaryCash = $('summaryCash');
 const summaryBoxInCash = $('summaryBoxInCash');
@@ -306,6 +276,8 @@ const soldProductsTable = $('soldProductsTable');
 const cashTotalBox = $('cashTotalBox');
 const qrTotalBox = $('qrTotalBox');
 const closingsMonthFilter = $('closingsMonthFilter');
+const searchClosingsBtn = $('searchClosingsBtn');
+const clearClosingsBtn = $('clearClosingsBtn');
 const cashClosingsTable = $('cashClosingsTable');
 const salesFromDate = $('salesFromDate');
 const salesToDate = $('salesToDate');
@@ -373,20 +345,23 @@ let activeSaleCategory = '';
 let activeOrderId = '';
 let isSubmittingSale = false;
 let saleProceedReady = false;
+let summaryDailySalesVisible = false;
 state.currentCart = [];
-state.outflows = [];
+state.outflows = JSON.parse(localStorage.getItem('cafeteria_outflows') || '[]');
 state.comboDraft = [];
 state.activeDebtorId = '';
-state.debtPayments = [];
+state.debtPayments = JSON.parse(localStorage.getItem('cafeteria_debt_payments') || '[]');
 state.comboBuilderItems = [];
-state.lastSyncAt = 0;
-state.forceLogoutAt = 0;
-state.cashBoxes = [];
+state.lastSyncAt = Number(localStorage.getItem('cafeteria_last_sync_at') || '0');
+state.forceLogoutAt = Number(localStorage.getItem('cafeteria_force_logout_at') || '0');
+state.cashBoxes = JSON.parse(localStorage.getItem('cafeteria_cash_boxes') || '[]');
 state.selectedClosingIds = [];
 state.generatedClosingsStats = null;
-state.components = [];
-state.componentLinks = {};
-state.componentMoves = [];
+state.components = JSON.parse(localStorage.getItem('cafeteria_components') || '[]');
+state.componentLinks = JSON.parse(localStorage.getItem('cafeteria_component_links') || '{}');
+state.componentMoves = JSON.parse(localStorage.getItem('cafeteria_component_moves') || '[]');
+state.cashClosingsLoaded = false;
+state.cashClosingsSearchMonth = '';
 
 let appConfig = {
   stockActivo: Boolean(state.stockConfig?.enabled),
@@ -394,7 +369,143 @@ let appConfig = {
   stockMinimo: Number(state.stockConfig?.min || 0)
 };
 
+let cloudPullInFlight = null;
 let cloudSyncTimer = null;
+let lastCloudPullAt = 0;
+let cloudHydrated = false;
+let bootCloudReady = false;
+let bootListenerReady = false;
+let bootCashReady = false;
+let firebaseRealtimeListener = null;
+let firebaseRealtimeListenerUrl = '';
+let realtimeReconnectTimer = null;
+const CLOUD_PULL_MIN_INTERVAL_MS = 2500;
+const CLOUD_POLL_INTERVAL_MS = 8000;
+const MODULE_DEFAULT_BOOT_ORDER = ['config', 'operations'];
+const MODULE_BACKGROUND_BOOT_ORDER = ['catalog', 'warehouse'];
+const MODULE_HISTORY_ORDER = ['history'];
+const MODULE_CRITICAL_SYNC_GUARDS = {
+  config: true,
+  operations: true,
+  catalog: false,
+  warehouse: false,
+  history: false
+};
+const MODULE_EMPTY_GUARDS = {
+  config: ['settings', 'categories', 'users'],
+  operations: ['cashBoxes', 'activeCashBoxId', 'systemStatus'],
+  catalog: ['products'],
+  warehouse: ['components'],
+  history: []
+};
+
+function safeJsonParse(raw, fallback) {
+  try { return JSON.parse(raw); } catch { return fallback; }
+}
+
+function approxPayloadBytes(value) {
+  try {
+    return new Blob([JSON.stringify(value ?? null)]).size;
+  } catch {
+    try { return JSON.stringify(value ?? null).length; } catch { return 0; }
+  }
+}
+
+function logCloudTransfer(kind, path, payload, meta = {}) {
+  const records = Array.isArray(payload)
+    ? payload.length
+    : (payload && typeof payload === 'object')
+      ? Object.keys(payload).length
+      : (payload == null ? 0 : 1);
+  console.info(`[cloud][${kind}]`, {
+    path,
+    records,
+    approxBytes: approxPayloadBytes(payload),
+    ...meta
+  });
+}
+
+function moduleMetaEntry(moduleName) {
+  if (!state.cloudModuleMeta || typeof state.cloudModuleMeta !== 'object') state.cloudModuleMeta = {};
+  if (!state.cloudModuleMeta[moduleName] || typeof state.cloudModuleMeta[moduleName] !== 'object') state.cloudModuleMeta[moduleName] = {};
+  return state.cloudModuleMeta[moduleName];
+}
+
+function setModuleMeta(moduleName, patch = {}) {
+  state.cloudModuleMeta = { ...(state.cloudModuleMeta || {}), [moduleName]: { ...moduleMetaEntry(moduleName), ...patch } };
+}
+
+function markModuleHydrated(moduleName, hydrated = true, extra = {}) {
+  state.moduleHydration = { ...(state.moduleHydration || {}), [moduleName]: { hydrated: Boolean(hydrated), at: Date.now(), ...extra } };
+}
+
+function isModuleHydrated(moduleName) {
+  return Boolean(state.moduleHydration?.[moduleName]?.hydrated);
+}
+
+function getModuleUpdatedAt(moduleName) {
+  return Number(moduleMetaEntry(moduleName).updatedAt || 0);
+}
+
+function isMeaningfullyEmpty(value) {
+  if (value == null) return true;
+  if (Array.isArray(value)) return value.length === 0;
+  if (typeof value === 'object') return Object.keys(value).length === 0;
+  if (typeof value === 'string') return value.trim() === '';
+  return false;
+}
+
+function shouldBlockModuleWrite(moduleName, payload, remoteModule = {}) {
+  if (!MODULE_CRITICAL_SYNC_GUARDS[moduleName]) return false;
+  if (!isModuleHydrated(moduleName)) {
+    console.warn('[sync][guard] módulo crítico no hidratado, escritura bloqueada', { moduleName });
+    return true;
+  }
+  const guardedKeys = MODULE_EMPTY_GUARDS[moduleName] || [];
+  const suspicious = guardedKeys.some((key) => isMeaningfullyEmpty(payload?.[key]) && !isMeaningfullyEmpty(remoteModule?.[key]));
+  if (suspicious) {
+    console.warn('[sync][guard] payload crítico sospechosamente vacío, escritura bloqueada', { moduleName, guardedKeys });
+    return true;
+  }
+  const remoteUpdatedAt = Number(remoteModule?.updatedAt || 0);
+  const localUpdatedAt = Number(payload?.updatedAt || 0);
+  if (remoteUpdatedAt > localUpdatedAt && localUpdatedAt > 0) {
+    console.warn('[sync][guard] remote es más nuevo que local, escritura bloqueada', { moduleName, remoteUpdatedAt, localUpdatedAt });
+    return true;
+  }
+  return false;
+}
+
+function recordModuleRead(moduleName, payload, reason = 'pull') {
+  setModuleMeta(moduleName, { updatedAt: Number(payload?.updatedAt || getModuleUpdatedAt(moduleName) || 0), lastReadAt: Date.now(), lastReadReason: reason });
+}
+
+function recordModuleWrite(moduleName, payload, reason = 'sync') {
+  setModuleMeta(moduleName, { updatedAt: Number(payload?.updatedAt || Date.now()), lastWriteAt: Date.now(), lastWriteReason: reason });
+}
+
+function markModulesDirty(modules = [], reason = 'local-change') {
+  const payload = snapshotPayload();
+  (modules || []).forEach((moduleName) => {
+    const modulePayload = payload?.[moduleName];
+    if (!modulePayload) return;
+    recordModuleWrite(moduleName, { ...modulePayload, updatedAt: Date.now() }, reason);
+    markModuleHydrated(moduleName, true, { source: reason });
+  });
+}
+
+function refreshPendingSyncButtons() {
+  const debtBtn = document.getElementById('debtSaveChangesBtn');
+  if (debtBtn) {
+    debtBtn.disabled = !pendingDebtSyncChanges;
+    debtBtn.textContent = pendingDebtSyncChanges ? 'Guardar cambios' : 'Cambios guardados';
+  }
+  const salesBtn = document.getElementById('salesSaveChangesBtn');
+  if (salesBtn) {
+    salesBtn.disabled = !pendingSalesAnnulSyncChanges;
+    salesBtn.textContent = pendingSalesAnnulSyncChanges ? 'Guardar cambios' : 'Cambios guardados';
+  }
+}
 
 function syncAppConfig() {
   appConfig = {
@@ -405,16 +516,41 @@ function syncAppConfig() {
 }
 
 let tempConfig = { stockActivo: appConfig.stockActivo, activarPedidos: appConfig.activarPedidos };
+let pendingDebtSyncChanges = false;
+let pendingSalesAnnulSyncChanges = false;
+const pendingDebtSaleIds = new Set();
+const pendingDebtPaymentIds = new Set();
+const pendingAnnulSaleIds = new Set();
 
 function syncTempConfigFromApp() {
   tempConfig = { stockActivo: appConfig.stockActivo, activarPedidos: appConfig.activarPedidos };
 }
-state.activeCashBoxId = '';
-state.systemStatus = 'CAJA_CERRADA';
+state.activeCashBoxId = localStorage.getItem('cafeteria_active_cash_box_id') || '';
+state.systemStatus = localStorage.getItem('cafeteria_system_status') || 'CAJA_CERRADA';
 state.salesHistoryMode = 'all';
 
-const SHARED_DB_PATH = FIREBASE_SHARED_NODE;
-const defaultCloudConfig = { firebaseDbUrl: FIREBASE_DB_URL, firebaseDbToken: FIREBASE_TOKEN, firebaseDbPath: FIREBASE_SHARED_NODE };
+const SHARED_DB_PATH = 'cafeteria_shared';
+const LEGACY_DB_PATH = 'cafeteria_BaseDatos2';
+// Estructura modular RTDB para reducir descargas:
+// - config: settings/categorías/usuarios y datos de UI relativamente estables.
+// - catalog: catálogo de productos (stock/precios/combos).
+// - operations: ventas/caja/deudas/correlativos, flujo vivo multiusuario.
+// - warehouse: componentes y recetas (links de componentes por producto).
+// - history: históricos pesados (cierres, eliminadas, movimientos archivables).
+// Cada función de sync/pull debe operar por módulo (no por snapshot raíz completo).
+const CLOUD_MODULE_PATHS = {
+  config: 'config',
+  catalog: 'catalog',
+  operations: 'operations',
+  warehouse: 'warehouse',
+  history: 'history'
+};
+const defaultCloudConfig = {
+  firebaseDbUrl: 'https://cafeteria-eventos-default-rtdb.firebaseio.com/',
+  firebaseDbToken: 'YIvsQEYPXsgduCLqQc5BWdG6mx7HG10blKpLK6pL',
+  firebaseDbPath: SHARED_DB_PATH,
+  firebaseStorageBucket: 'cafeteria-eventos.firebasestorage.app',
+};
 
 const defaultBillingConfig = {
   enabled: false,
@@ -471,14 +607,319 @@ function normalizeBillingSettings() {
 
 function normalizeCloudSettings() {
   state.settings = { ...defaultCloudConfig, ...(state.settings || {}) };
-  if (!String(state.settings.firebaseDbUrl || '').trim()) state.settings.firebaseDbUrl = defaultCloudConfig.firebaseDbUrl;
+  const configuredDbUrl = String(state.settings.firebaseDbUrl || '').trim();
+  if (configuredDbUrl && configuredDbUrl !== defaultCloudConfig.firebaseDbUrl) {
+    console.warn('[cloud][config] firebaseDbUrl personalizado detectado; se forzará URL compartida.', { configuredDbUrl, forcedDbUrl: defaultCloudConfig.firebaseDbUrl });
+  }
+  state.settings.firebaseDbUrl = defaultCloudConfig.firebaseDbUrl;
   if (!String(state.settings.firebaseDbToken || '').trim()) state.settings.firebaseDbToken = defaultCloudConfig.firebaseDbToken;
+  if (!String(state.settings.firebaseStorageBucket || '').trim()) state.settings.firebaseStorageBucket = defaultCloudConfig.firebaseStorageBucket;
   const currentPath = String(state.settings.firebaseDbPath || '').trim();
-  if (!currentPath) state.settings.firebaseDbPath = SHARED_DB_PATH;
+  if (currentPath && currentPath !== SHARED_DB_PATH) {
+    console.warn('[cloud][config] firebaseDbPath personalizado detectado; se forzará raíz compartida.', { currentPath, forcedPath: SHARED_DB_PATH });
+  }
+  state.settings.firebaseDbPath = SHARED_DB_PATH;
   normalizeBillingSettings();
 }
 
 normalizeCloudSettings();
+
+function cloudSeedTemplate() {
+  return {
+    products: [],
+    sales: [],
+    deletedSales: [],
+    cashClosings: [],
+    cashSession: null,
+    users: [],
+    settings: {},
+    categories: [],
+    subcategories: {},
+    people: [],
+    stockConfig: { enabled: false, min: 0 },
+    stockWriteOffs: [],
+    outflows: [],
+    debtPayments: [],
+    components: [],
+    componentLinks: {},
+    componentMoves: [],
+    cashBoxes: [],
+    activeCashBoxId: '',
+    systemStatus: 'CAJA_CERRADA',
+    forceLogoutAt: 0,
+    userSalesModes: {},
+    touchUiConfigByUser: {},
+    categoryImages: {},
+    orderCounters: {},
+    deletedRecordIds: { cashClosings: [], sales: [], products: [], categories: [] },
+    generalCash: { efectivo: 0, qr: 0, estado: 'CERRADA', openedAt: '', closedAt: '', openedBy: '', closedBy: '', updatedAt: 0 },
+    generalClosings: [],
+    cashStateVersion: 0,
+    cashStateUpdatedAt: 0,
+    updatedAt: 0
+  };
+}
+
+function normalizeCollectionToArray(value) {
+  if (Array.isArray(value)) return value;
+  if (value && typeof value === 'object') return Object.values(value).filter((x) => x && typeof x === 'object');
+  return [];
+}
+
+function collectionToObjectById(list = []) {
+  const out = {};
+  normalizeCollectionToArray(list).forEach((item) => {
+    if (!item?.id) return;
+    out[String(item.id)] = item;
+  });
+  return out;
+}
+
+function cloudModulePayloadFromState() {
+  return {
+    config: {
+      settings: state.settings || {},
+      categories: state.categories || [],
+      subcategories: state.subcategories || {},
+      categoryImages: state.categoryImages || {},
+      users: state.users || [],
+      people: state.people || [],
+      stockConfig: state.stockConfig || { enabled: false, min: 0 },
+      userSalesModes: state.userSalesModes || {},
+      touchUiConfigByUser: state.touchUiConfigByUser || {},
+      forceLogoutAt: Number(state.forceLogoutAt || 0),
+      updatedAt: Date.now()
+    },
+    catalog: {
+      products: collectionToObjectById(state.products || []),
+      updatedAt: Date.now()
+    },
+    operations: {
+      sales: collectionToObjectById(state.sales || []),
+      outflows: collectionToObjectById(state.outflows || []),
+      debtPayments: collectionToObjectById(state.debtPayments || []),
+      stockWriteOffs: collectionToObjectById(state.stockWriteOffs || []),
+      orderCounters: state.orderCounters || {},
+      cashBoxes: collectionToObjectById(state.cashBoxes || []),
+      activeCashBoxId: state.activeCashBoxId || '',
+      systemStatus: state.systemStatus || 'CAJA_CERRADA',
+      cashSession: state.cashSession || null,
+      generalCash: state.generalCash || { efectivo: 0, qr: 0, estado: 'CERRADA', openedAt: '', closedAt: '', openedBy: '', closedBy: '', updatedAt: 0 },
+      generalClosings: state.generalClosings || [],
+      cashStateVersion: Number(state.cashStateVersion || 0),
+      cashStateUpdatedAt: Number(state.cashStateUpdatedAt || 0),
+      updatedAt: Date.now()
+    },
+    warehouse: {
+      components: collectionToObjectById(state.components || []),
+      componentLinks: state.componentLinks || {},
+      updatedAt: Date.now()
+    },
+    history: {
+      cashClosings: collectionToObjectById(state.cashClosings || []),
+      deletedSales: collectionToObjectById(state.deletedSales || []),
+      componentMoves: collectionToObjectById(state.componentMoves || []),
+      deletedRecordIds: state.deletedRecordIds || { cashClosings: [], sales: [], products: [], categories: [] },
+      updatedAt: Date.now()
+    }
+  };
+}
+
+function normalizeCloudModules(raw = {}) {
+  const flat = cloudSeedTemplate();
+  const data = (raw && typeof raw === 'object') ? raw : {};
+  const config = data.config || {};
+  const catalog = data.catalog || {};
+  const operations = data.operations || {};
+  const warehouse = data.warehouse || {};
+  const history = data.history || {};
+
+  flat.settings = (config.settings && typeof config.settings === 'object') ? { ...config.settings } : {};
+  flat.categories = Array.isArray(config.categories) ? config.categories : [];
+  flat.subcategories = (config.subcategories && typeof config.subcategories === 'object' && !Array.isArray(config.subcategories)) ? config.subcategories : {};
+  flat.categoryImages = (config.categoryImages && typeof config.categoryImages === 'object' && !Array.isArray(config.categoryImages)) ? config.categoryImages : {};
+  flat.users = normalizeCollectionToArray(config.users);
+  flat.people = Array.isArray(config.people) ? config.people : [];
+  flat.stockConfig = (config.stockConfig && typeof config.stockConfig === 'object') ? config.stockConfig : { enabled: false, min: 0 };
+  flat.userSalesModes = (config.userSalesModes && typeof config.userSalesModes === 'object') ? config.userSalesModes : {};
+  flat.touchUiConfigByUser = (config.touchUiConfigByUser && typeof config.touchUiConfigByUser === 'object') ? config.touchUiConfigByUser : {};
+  flat.forceLogoutAt = Number(config.forceLogoutAt || 0);
+
+  flat.products = normalizeCollectionToArray(catalog.products);
+  flat.sales = normalizeCollectionToArray(operations.sales);
+  flat.outflows = normalizeCollectionToArray(operations.outflows);
+  flat.debtPayments = normalizeCollectionToArray(operations.debtPayments);
+  flat.stockWriteOffs = normalizeCollectionToArray(operations.stockWriteOffs);
+  flat.orderCounters = (operations.orderCounters && typeof operations.orderCounters === 'object' && !Array.isArray(operations.orderCounters)) ? operations.orderCounters : {};
+  flat.cashBoxes = normalizeCollectionToArray(operations.cashBoxes);
+  flat.activeCashBoxId = String(operations.activeCashBoxId || '');
+  flat.systemStatus = operations.systemStatus || 'CAJA_CERRADA';
+  flat.cashSession = (operations.cashSession && typeof operations.cashSession === 'object') ? operations.cashSession : null;
+  flat.generalCash = (operations.generalCash && typeof operations.generalCash === 'object') ? operations.generalCash : flat.generalCash;
+  flat.generalClosings = Array.isArray(operations.generalClosings) ? operations.generalClosings : [];
+  flat.cashStateVersion = Number(operations.cashStateVersion || 0);
+  flat.cashStateUpdatedAt = Number(operations.cashStateUpdatedAt || 0);
+
+  flat.components = normalizeCollectionToArray(warehouse.components);
+  flat.componentLinks = (warehouse.componentLinks && typeof warehouse.componentLinks === 'object' && !Array.isArray(warehouse.componentLinks)) ? warehouse.componentLinks : {};
+
+  flat.cashClosings = normalizeCollectionToArray(history.cashClosings);
+  flat.deletedSales = normalizeCollectionToArray(history.deletedSales);
+  flat.componentMoves = normalizeCollectionToArray(history.componentMoves);
+  flat.deletedRecordIds = (history.deletedRecordIds && typeof history.deletedRecordIds === 'object' && !Array.isArray(history.deletedRecordIds))
+    ? history.deletedRecordIds
+    : { cashClosings: [], sales: [], products: [], categories: [] };
+  flat.updatedAt = Math.max(
+    Number(config.updatedAt || 0),
+    Number(catalog.updatedAt || 0),
+    Number(operations.updatedAt || 0),
+    Number(warehouse.updatedAt || 0),
+    Number(history.updatedAt || 0),
+    Date.now()
+  );
+  return normalizeCloudSeedObject(flat);
+}
+
+function normalizeCloudSeedObject(raw) {
+  const base = cloudSeedTemplate();
+  const data = (raw && typeof raw === 'object' && !Array.isArray(raw)) ? { ...raw } : {};
+  const merged = { ...base, ...data };
+  merged.products = normalizeCollectionToArray(merged.products);
+  merged.sales = normalizeCollectionToArray(merged.sales);
+  merged.deletedSales = normalizeCollectionToArray(merged.deletedSales);
+  merged.cashClosings = normalizeCollectionToArray(merged.cashClosings);
+  merged.users = normalizeCollectionToArray(merged.users);
+  if (!Array.isArray(merged.categories)) merged.categories = [];
+  if (!merged.subcategories || typeof merged.subcategories !== 'object' || Array.isArray(merged.subcategories)) merged.subcategories = {};
+  if (!Array.isArray(merged.people)) merged.people = [];
+  if (!merged.stockConfig || typeof merged.stockConfig !== 'object') merged.stockConfig = { enabled: false, min: 0 };
+  if (!Array.isArray(merged.outflows)) merged.outflows = [];
+  if (!Array.isArray(merged.debtPayments)) merged.debtPayments = [];
+  if (!Array.isArray(merged.stockWriteOffs)) merged.stockWriteOffs = [];
+  if (!Array.isArray(merged.components)) merged.components = [];
+  if (!merged.componentLinks || typeof merged.componentLinks !== 'object' || Array.isArray(merged.componentLinks)) merged.componentLinks = {};
+  if (!Array.isArray(merged.componentMoves)) merged.componentMoves = [];
+  if (!Array.isArray(merged.cashBoxes)) merged.cashBoxes = [];
+  if (!merged.orderCounters || typeof merged.orderCounters !== 'object' || Array.isArray(merged.orderCounters)) merged.orderCounters = {};
+  if (!merged.deletedRecordIds || typeof merged.deletedRecordIds !== 'object' || Array.isArray(merged.deletedRecordIds)) merged.deletedRecordIds = { cashClosings: [], sales: [], products: [], categories: [] };
+  merged.deletedRecordIds.cashClosings = Array.isArray(merged.deletedRecordIds.cashClosings) ? merged.deletedRecordIds.cashClosings : [];
+  merged.deletedRecordIds.sales = Array.isArray(merged.deletedRecordIds.sales) ? merged.deletedRecordIds.sales : [];
+  merged.deletedRecordIds.products = Array.isArray(merged.deletedRecordIds.products) ? merged.deletedRecordIds.products : [];
+  merged.deletedRecordIds.categories = Array.isArray(merged.deletedRecordIds.categories) ? merged.deletedRecordIds.categories : [];
+  if (!merged.generalCash || typeof merged.generalCash !== 'object' || Array.isArray(merged.generalCash)) merged.generalCash = base.generalCash;
+  merged.generalCash = { ...base.generalCash, ...merged.generalCash };
+  if (!Array.isArray(merged.generalClosings)) merged.generalClosings = [];
+  merged.cashStateVersion = Number(merged.cashStateVersion || 0);
+  merged.cashStateUpdatedAt = Number(merged.cashStateUpdatedAt || 0);
+  if (!merged.settings || typeof merged.settings !== 'object' || Array.isArray(merged.settings)) merged.settings = {};
+  if (!merged.userSalesModes || typeof merged.userSalesModes !== 'object' || Array.isArray(merged.userSalesModes)) merged.userSalesModes = {};
+  if (!merged.touchUiConfigByUser || typeof merged.touchUiConfigByUser !== 'object' || Array.isArray(merged.touchUiConfigByUser)) merged.touchUiConfigByUser = {};
+  if (!merged.categoryImages || typeof merged.categoryImages !== 'object' || Array.isArray(merged.categoryImages)) merged.categoryImages = {};
+  merged.updatedAt = Math.max(Number(merged.updatedAt || 0), Date.now());
+  if (!merged.users.find((u) => u?.username === 'admin')) {
+    merged.users.push({ username: 'admin', password: '5432', permissions: defaultPermissions(), createdBy: 'admin', enabled: true, lastActivityAt: Date.now(), lastLogoutAt: 0 });
+  }
+  return merged;
+}
+
+let cloudSeedValidatedAt = 0;
+async function ensureCloudSeedData(options = {}) {
+  if (!state.settings?.firebaseDbUrl) return;
+  if (!options.force && (Date.now() - cloudSeedValidatedAt) < 5000) return;
+  const token = normalizedFirebaseToken();
+  const authModes = token ? [true, false] : [false];
+  let lastError = null;
+  for (const includeToken of authModes) {
+    const modeLabel = includeToken ? 'token' : 'sin-token';
+    const rootUrl = buildCloudRootUrl({ includeToken });
+    if (!rootUrl) continue;
+    try {
+      const resp = await fetch(rootUrl);
+      if (!resp.ok) {
+        if (includeToken && (resp.status === 401 || resp.status === 403)) continue;
+        throw new Error(`[seed] GET root fallo ${resp.status}`);
+      }
+      let raw = null;
+      try { raw = await resp.json(); } catch { raw = null; }
+      const validObject = raw && typeof raw === 'object' && !Array.isArray(raw) ? raw : {};
+      const hasModules = Object.values(CLOUD_MODULE_PATHS).every((path) => validObject[path] && typeof validObject[path] === 'object');
+      if (!hasModules) {
+        const legacyNormalized = normalizeCloudSeedObject(validObject);
+        const modularSeed = cloudModulePayloadFromState();
+        modularSeed.config = { ...modularSeed.config, ...{
+          settings: legacyNormalized.settings,
+          categories: legacyNormalized.categories,
+          subcategories: legacyNormalized.subcategories,
+          categoryImages: legacyNormalized.categoryImages,
+          users: legacyNormalized.users,
+          people: legacyNormalized.people,
+          stockConfig: legacyNormalized.stockConfig,
+          userSalesModes: legacyNormalized.userSalesModes,
+          touchUiConfigByUser: legacyNormalized.touchUiConfigByUser,
+          forceLogoutAt: legacyNormalized.forceLogoutAt
+        }};
+        modularSeed.catalog.products = collectionToObjectById(legacyNormalized.products);
+        modularSeed.operations = {
+          ...modularSeed.operations,
+          sales: collectionToObjectById(legacyNormalized.sales),
+          outflows: collectionToObjectById(legacyNormalized.outflows),
+          debtPayments: collectionToObjectById(legacyNormalized.debtPayments),
+          stockWriteOffs: collectionToObjectById(legacyNormalized.stockWriteOffs),
+          orderCounters: legacyNormalized.orderCounters || {},
+          cashBoxes: collectionToObjectById(legacyNormalized.cashBoxes),
+          activeCashBoxId: legacyNormalized.activeCashBoxId || '',
+          systemStatus: legacyNormalized.systemStatus || 'CAJA_CERRADA',
+          cashSession: legacyNormalized.cashSession || null,
+          generalCash: legacyNormalized.generalCash || modularSeed.operations.generalCash,
+          generalClosings: legacyNormalized.generalClosings || []
+        };
+        modularSeed.warehouse.components = collectionToObjectById(legacyNormalized.components);
+        modularSeed.warehouse.componentLinks = legacyNormalized.componentLinks || {};
+        modularSeed.history = {
+          ...modularSeed.history,
+          cashClosings: collectionToObjectById(legacyNormalized.cashClosings),
+          deletedSales: collectionToObjectById(legacyNormalized.deletedSales),
+          componentMoves: collectionToObjectById(legacyNormalized.componentMoves),
+          deletedRecordIds: legacyNormalized.deletedRecordIds || { cashClosings: [], sales: [], products: [], categories: [] }
+        };
+        const putResp = await fetch(rootUrl, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(modularSeed) });
+        if (!putResp.ok) {
+          if (includeToken && (putResp.status === 401 || putResp.status === 403)) continue;
+          throw new Error(`[seed] PUT seed modular fallo ${putResp.status}`);
+        }
+        console.info('[seed] Estructura modular creada en cafeteria_shared.', { modeLabel });
+      }
+      cloudSeedValidatedAt = Date.now();
+      return;
+    } catch (err) {
+      lastError = err;
+      if (!(includeToken && [401, 403].includes(Number(err?.status || 0)))) {
+        console.error('[seed] Error en ensureCloudSeedData', { modeLabel, message: err?.message });
+      }
+    }
+  }
+  if (lastError) throw lastError;
+}
+
+function saleDebugContext(extra = {}) {
+  const activeCash = getActiveCashBox();
+  return {
+    firebaseDbUrl: state.settings?.firebaseDbUrl || '',
+    firebaseDbPath: state.settings?.firebaseDbPath || '',
+    rootUrlWithToken: buildCloudRootUrl({ includeToken: true }),
+    rootUrlWithoutToken: buildCloudRootUrl({ includeToken: false }),
+    activeCashBoxId: state.activeCashBoxId || '',
+    activeCashExists: Boolean(activeCash),
+    cashStatus: state.systemStatus,
+    currentUser: state.currentUser?.username || '',
+    cloudHydrated,
+    hasOrderCounterMap: Boolean(state.orderCounters && typeof state.orderCounters === 'object'),
+    hasProductsLocal: Array.isArray(state.products),
+    localProductsCount: Array.isArray(state.products) ? state.products.length : -1,
+    localSalesCount: Array.isArray(state.sales) ? state.sales.length : -1,
+    ...extra
+  };
+}
 
 
 function money(v) { return `Bs ${Number(v || 0).toFixed(2)}`; }
@@ -511,6 +952,16 @@ function formatProductWithComboDetails(item) {
 function uid() { return `${Date.now()}_${Math.floor(Math.random() * 9999)}`; }
 function setMsg(el, txt, ok = true) { if (!el) return; el.textContent = txt; el.className = ok ? 'ok' : 'error'; }
 
+function safeLocalSet(key, value) {
+  try {
+    localStorage.setItem(key, value);
+    return true;
+  } catch (err) {
+    console.warn('[localStorage] setItem failed', key, err?.message || err);
+    return false;
+  }
+}
+
 function refreshFinancialViews() {
   renderSalesHistory();
   renderDeletedSales();
@@ -523,79 +974,163 @@ function refreshFinancialViews() {
   renderOutflows();
 }
 
-function cloneData(value) {
-  return value === undefined ? undefined : JSON.parse(JSON.stringify(value));
+function productsForLocalPersistence() {
+  return (state.products || []).map((p) => ({ ...p }));
 }
 
-function mapFromArray(list = []) {
-  return (list || []).reduce((acc, item) => {
-    if (item?.id) acc[String(item.id)] = cloneData(item);
-    return acc;
-  }, {});
+function categoryImagesForLocalPersistence() {
+  return { ...(state.categoryImages || {}) };
 }
 
-function sortedArrayFromMap(mapValue = {}, sortKey = 'createdAt') {
-  return Object.values(mapValue || {}).sort((a, b) => {
-    const av = Date.parse(a?.[sortKey] || '') || 0;
-    const bv = Date.parse(b?.[sortKey] || '') || 0;
-    return bv - av;
-  });
+function saveLocalState() {
+  safeLocalSet('cafeteria_last_sync_at', String(state.lastSyncAt || 0));
+  safeLocalSet('cafeteria_force_logout_at', String(state.forceLogoutAt || 0));
+  safeLocalSet('cafeteria_cash_boxes', JSON.stringify(state.cashBoxes || []));
+  safeLocalSet('cafeteria_active_cash_box_id', state.activeCashBoxId || '');
+  safeLocalSet('cafeteria_system_status', state.systemStatus || 'CAJA_CERRADA');
+  safeLocalSet('cafeteria_products', JSON.stringify(productsForLocalPersistence()));
+  safeLocalSet('cafeteria_sales', JSON.stringify(state.sales));
+  safeLocalSet('cafeteria_deleted_sales', JSON.stringify(state.deletedSales));
+  safeLocalSet('cafeteria_cash_closings', JSON.stringify(state.cashClosings));
+  safeLocalSet('cafeteria_cash_session', JSON.stringify(state.cashSession));
+  safeLocalSet('cafeteria_users', JSON.stringify(state.users));
+  safeLocalSet('cafeteria_current_user', JSON.stringify(state.currentUser));
+  safeLocalSet('cafeteria_settings', JSON.stringify(state.settings));
+  safeLocalSet('cafeteria_categories', JSON.stringify(state.categories));
+  safeLocalSet('cafeteria_people', JSON.stringify(state.people));
+  safeLocalSet('cafeteria_stock_config', JSON.stringify(state.stockConfig));
+  safeLocalSet('cafeteria_stock_writeoffs', JSON.stringify(state.stockWriteOffs || []));
+  safeLocalSet('cafeteria_outflows', JSON.stringify(state.outflows));
+  safeLocalSet('cafeteria_debt_payments', JSON.stringify(state.debtPayments));
+  safeLocalSet('cafeteria_components', JSON.stringify(state.components || []));
+  safeLocalSet('cafeteria_component_links', JSON.stringify(state.componentLinks || {}));
+  safeLocalSet('cafeteria_component_moves', JSON.stringify(state.componentMoves || []));
+  safeLocalSet('cafeteria_queued_orders', JSON.stringify(state.queuedOrders || []));
+  safeLocalSet('cafeteria_removed_people_ids', JSON.stringify(state.removedPeopleIds || []));
+  safeLocalSet('cafeteria_user_sales_modes', JSON.stringify(state.userSalesModes || {}));
+  safeLocalSet('cafeteria_touch_ui_config_by_user', JSON.stringify(state.touchUiConfigByUser || {}));
+  safeLocalSet('cafeteria_category_images', JSON.stringify(categoryImagesForLocalPersistence()));
+  safeLocalSet('cafeteria_order_counters', JSON.stringify(state.orderCounters || {}));
+  safeLocalSet('cafeteria_deleted_record_ids', JSON.stringify(state.deletedRecordIds || { cashClosings: [], sales: [], products: [], categories: [] }));
+  safeLocalSet('cafeteria_subcategories', JSON.stringify(state.subcategories || {}));
+  safeLocalSet('cafeteria_general_cash', JSON.stringify(state.generalCash || { efectivo: 0, qr: 0, estado: 'CERRADA', openedAt: '', closedAt: '', openedBy: '', closedBy: '', updatedAt: 0 }));
+  safeLocalSet('cafeteria_general_closings', JSON.stringify(state.generalClosings || []));
+  safeLocalSet('cafeteria_cloud_module_meta', JSON.stringify(state.cloudModuleMeta || {}));
+  safeLocalSet('cafeteria_module_hydration', JSON.stringify(state.moduleHydration || {}));
 }
 
-function snapshotPayload() {
-  return {
-    products: mapFromArray(state.products),
-    sales: mapFromArray(state.sales),
-    deletedSales: mapFromArray(state.deletedSales),
-    cashClosings: mapFromArray(state.cashClosings),
-    cashSession: cloneData(state.cashSession),
-    users: mapFromArray((state.users || []).map((u) => ({ ...u, id: u.username }))),
-    settings: cloneData(state.settings),
-    categories: cloneData(state.categories || []),
-    people: mapFromArray(state.people),
-    stockConfig: cloneData(state.stockConfig),
-    outflows: mapFromArray(state.outflows),
-    debtPayments: mapFromArray(state.debtPayments),
-    components: mapFromArray(state.components),
-    componentLinks: cloneData(state.componentLinks || {}),
-    componentMoves: mapFromArray(state.componentMoves),
-    cashBoxes: mapFromArray(state.cashBoxes),
-    activeCashBoxId: state.activeCashBoxId || '',
-    systemStatus: state.systemStatus || 'CAJA_CERRADA',
-    forceLogoutAt: Number(state.forceLogoutAt || 0),
-    userSalesModes: cloneData(state.userSalesModes || {}),
-    touchUiConfigByUser: cloneData(state.touchUiConfigByUser || {}),
-    categoryImages: cloneData(state.categoryImages || {}),
-    orderCounters: cloneData(state.orderCounters || {}),
-    deletedRecordIds: cloneData(state.deletedRecordIds || { cashClosings: [], sales: [] }),
-    queuedOrders: mapFromArray(state.queuedOrders || []),
-    removedPeopleIds: cloneData(state.removedPeopleIds || []),
-    updatedAt: Date.now()
-  };
-}
-
-async function syncToCloud() {
-  if (!realtimeRootRef) throw new Error('Firebase no inicializado.');
-  const payload = snapshotPayload();
-  const previous = lastPersistedState || {};
-  const patch = {};
-  for (const [key, value] of Object.entries(payload)) {
-    if (JSON.stringify(previous[key]) !== JSON.stringify(value)) patch[key] = value;
-  }
-  if (!Object.keys(patch).length) return payload;
-  await update(realtimeRootRef, patch);
-  lastPersistedState = payload;
-  state.lastSyncAt = Number(payload.updatedAt || Date.now());
-  return payload;
-}
-
-function scheduleCloudSync(delayMs = 250) {
+function scheduleCloudSync(delayMs = 1200, options = {}) {
   if (cloudSyncTimer) clearTimeout(cloudSyncTimer);
+  const syncOptions = { ...options };
   cloudSyncTimer = setTimeout(() => {
     cloudSyncTimer = null;
-    syncToCloud().catch((err) => console.error('[firebase] persist failed', err));
-  }, Math.max(50, Number(delayMs || 250)));
+    syncToCloud(syncOptions).catch((err) => console.error('[sync] scheduled sync failed', err));
+  }, Math.max(200, Number(delayMs || 1200)));
 }
+
+
+function normalizedFirebaseToken() {
+  const raw = String(state.settings?.firebaseDbToken || '').trim();
+  if (!raw || raw === 'undefined' || raw === 'null') return '';
+  return raw;
+}
+
+function buildCloudRootUrl({ includeToken = true } = {}) {
+  const base = String(state.settings?.firebaseDbUrl || '').replace(/\/$/, '');
+  if (!base) return '';
+  const token = includeToken ? normalizedFirebaseToken() : '';
+  const qs = token ? `?auth=${encodeURIComponent(token)}` : '';
+  return `${base}/${state.settings.firebaseDbPath || SHARED_DB_PATH}.json${qs}`;
+}
+
+function cloudRootUrl() {
+  return buildCloudRootUrl({ includeToken: true });
+}
+
+function cloudChildUrl(childPath = '') {
+  const root = cloudRootUrl();
+  if (!root) return '';
+  const safeChild = String(childPath || '').replace(/^\/+/, '');
+  return safeChild ? root.replace(/\.json(\?.*)?$/, `/${safeChild}.json$1`) : root;
+}
+
+
+function inferStorageProjectId() {
+  const dbUrl = String(state.settings?.firebaseDbUrl || defaultCloudConfig.firebaseDbUrl || '');
+  const m = dbUrl.match(/^https:\/\/([^.]+)\./i);
+  const hostId = m ? String(m[1] || '').trim() : '';
+  if (!hostId) return '';
+  return hostId.replace(/-default-rtdb$/i, '');
+}
+
+function inferStorageBucketCandidates() {
+  const configured = String(state.settings?.firebaseStorageBucket || '').trim();
+  if (configured) return [configured];
+  const projectId = inferStorageProjectId();
+  if (!projectId) return [];
+  return [`${projectId}.firebasestorage.app`, `${projectId}.appspot.com`];
+}
+
+function inferStorageBucket() {
+  return inferStorageBucketCandidates()[0] || '';
+}
+
+let resolvedStorageBucket = '';
+async function resolveStorageBucket() {
+  if (resolvedStorageBucket) return resolvedStorageBucket;
+  const candidates = inferStorageBucketCandidates();
+  if (!candidates.length) return '';
+  for (const bucket of candidates) {
+    try {
+      const res = await fetch(`https://firebasestorage.googleapis.com/v0/b/${encodeURIComponent(bucket)}/o?maxResults=1`, { method: 'GET' });
+      if (res.status !== 404) {
+        resolvedStorageBucket = bucket;
+        return bucket;
+      }
+    } catch {}
+  }
+  return candidates[0] || '';
+}
+
+let firebaseStorageReadyPromise = null;
+let firebaseStorageBucketBound = '';
+async function ensureFirebaseStorageSdk(bucketOverride = '') {
+  if (window.firebase?.storage) return window.firebase;
+  if (firebaseStorageReadyPromise && (!bucketOverride || bucketOverride === firebaseStorageBucketBound)) return firebaseStorageReadyPromise;
+  const loadScript = (src) => new Promise((resolve, reject) => {
+    const existing = document.querySelector(`script[src="${src}"]`);
+    if (existing) {
+      if (window.firebase?.storage) return resolve();
+      existing.addEventListener('load', () => resolve(), { once: true });
+      existing.addEventListener('error', () => reject(new Error(`No se pudo cargar ${src}`)), { once: true });
+      return;
+    }
+    const script = document.createElement('script');
+    script.src = src;
+    script.async = true;
+    script.onload = () => resolve();
+    script.onerror = () => reject(new Error(`No se pudo cargar ${src}`));
+    document.head.appendChild(script);
+  });
+  firebaseStorageReadyPromise = (async () => {
+    await withTimeout(loadScript('https://www.gstatic.com/firebasejs/10.12.4/firebase-app-compat.js'), 7000, 'No se pudo cargar Firebase App SDK.');
+    await withTimeout(loadScript('https://www.gstatic.com/firebasejs/10.12.4/firebase-storage-compat.js'), 7000, 'No se pudo cargar Firebase Storage SDK.');
+    if (!window.firebase) throw new Error('Firebase SDK no disponible.');
+    const bucket = bucketOverride || inferStorageBucket();
+    if (!bucket) throw new Error('No se pudo inferir firebaseStorageBucket.');
+    firebaseStorageBucketBound = bucket;
+    const appName = 'cafeteria-storage';
+    const existing = window.firebase.apps.find((a) => a.name === appName);
+    const app = existing || window.firebase.initializeApp({ storageBucket: bucket }, appName);
+    return { app, storage: window.firebase.storage(app) };
+  })();
+  return firebaseStorageReadyPromise;
+}
+
+function normalizeImagePathSegment(value) {
+  return String(value || '').normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-zA-Z0-9_-]+/g, '-').replace(/^-+|-+$/g, '').toLowerCase() || 'item';
+}
+
 
 function withTimeout(promise, timeoutMs, message = 'Tiempo de espera agotado.') {
   let timer = 0;
@@ -603,10 +1138,6 @@ function withTimeout(promise, timeoutMs, message = 'Tiempo de espera agotado.') 
     timer = window.setTimeout(() => reject(new Error(message)), Math.max(1000, Number(timeoutMs || 25000)));
   });
   return Promise.race([promise, timeout]).finally(() => { if (timer) clearTimeout(timer); });
-}
-
-function normalizeImagePathSegment(value) {
-  return String(value || '').normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-zA-Z0-9_-]+/g, '-').replace(/^-+|-+$/g, '').toLowerCase() || 'item';
 }
 
 async function optimizeImageForUpload(file, { maxSize = 300 } = {}) {
@@ -628,171 +1159,403 @@ async function optimizeImageForUpload(file, { maxSize = 300 } = {}) {
 }
 
 async function uploadImageToFirebaseStorage({ kind, key, file, previousUrl = '', onProgress = null }) {
-  if (!firebaseStorage) { const dataUrl = await blobToDataUrl(file); if (onProgress) onProgress(100); return dataUrl; }
-  const safeKey = normalizeImagePathSegment(key);
-  const ext = file.type.includes('png') ? 'webp' : (file.type.includes('jpeg') || file.type.includes('jpg') ? 'jpg' : 'webp');
-  const folder = kind === 'category' ? 'categorias' : 'productos';
-  const path = `${folder}/${safeKey}-${Date.now()}.${ext}`;
-  const optimized = await optimizeImageForUpload(file, { maxSize: kind === 'category' ? 400 : 300 });
-  const uploadTask = uploadBytesResumable(storageRef(firebaseStorage, path), optimized.blob, { contentType: optimized.contentType, cacheControl: 'public,max-age=31536000' });
-  await withTimeout(new Promise((resolve, reject) => {
-    uploadTask.on('state_changed', (snap) => {
-      if (!onProgress) return;
-      const total = Number(snap.totalBytes || 0);
-      const loaded = Number(snap.bytesTransferred || 0);
-      onProgress(total > 0 ? Math.round((loaded / total) * 100) : 0);
-    }, reject, resolve);
-  }), 20000, 'La subida tardó demasiado. Verifica tu conexión o reglas de Firebase Storage.');
-  const downloadUrl = await getDownloadURL(uploadTask.snapshot.ref);
   try {
-    if (previousUrl && previousUrl.includes('/o/')) {
-      const oldPath = decodeURIComponent(previousUrl.split('/o/')[1]?.split('?')[0] || '');
-      if (oldPath) await deleteObject(storageRef(firebaseStorage, oldPath));
+    const bucket = await resolveStorageBucket();
+    if (!bucket) throw new Error('No se pudo determinar el bucket de Firebase Storage.');
+    const safeKey = normalizeImagePathSegment(key);
+    const ext = file.type.includes('png') ? 'webp' : (file.type.includes('jpeg') || file.type.includes('jpg') ? 'jpg' : 'webp');
+    const folder = kind === 'category' ? 'categorias' : 'productos';
+    const path = `${folder}/${safeKey}-${Date.now()}.${ext}`;
+    const optimized = await optimizeImageForUpload(file, { maxSize: kind === 'category' ? 400 : 300 });
+    const { storage } = await ensureFirebaseStorageSdk(bucket);
+    const ref = storage.ref(path);
+    const task = ref.put(optimized.blob, { contentType: optimized.contentType, cacheControl: 'public,max-age=31536000' });
+    await withTimeout(new Promise((resolve, reject) => {
+      task.on('state_changed', (snap) => {
+        if (!onProgress) return;
+        const total = Number(snap.totalBytes || 0);
+        const loaded = Number(snap.bytesTransferred || 0);
+        onProgress(total > 0 ? Math.round((loaded / total) * 100) : 0);
+      }, (err) => reject(err), () => resolve());
+    }), 20000, 'La subida tardó demasiado. Verifica tu conexión o reglas de Firebase Storage.');
+    const downloadUrl = await withTimeout(ref.getDownloadURL(), 8000, 'No se pudo obtener URL pública de la imagen.');
+    try {
+      if (previousUrl && previousUrl.includes('/o/')) {
+        const oldPath = decodeURIComponent(previousUrl.split('/o/')[1]?.split('?')[0] || '');
+        if (oldPath) {
+          await storage.ref(oldPath).delete();
+        }
+      }
+    } catch {}
+    return downloadUrl;
+  } catch (err) {
+    console.error('[storage] Error durante subida/URL en Firebase Storage', { kind, key, message: err?.message });
+    throw err;
+  }
+}
+
+
+function cloudBaseEndpoint({ includeToken = true } = {}) {
+  const root = buildCloudRootUrl({ includeToken });
+  return root ? root.replace(/\.json(\?.*)?$/, '') : '';
+}
+
+function cloudPathUrl(path, { includeToken = true } = {}) {
+  const base = cloudBaseEndpoint({ includeToken });
+  if (!base) return '';
+  const token = includeToken ? normalizedFirebaseToken() : '';
+  const qs = token ? `?auth=${encodeURIComponent(token)}` : '';
+  return `${base}/${String(path || '').replace(/^\/+/, '')}.json${qs}`;
+}
+
+async function cloudReadPath(path, { includeToken = true } = {}) {
+  const url = cloudPathUrl(path, { includeToken });
+  if (!url) throw new Error('[cloud] URL inválida para lectura.');
+  const resp = await fetch(url);
+  if (!resp.ok) throw Object.assign(new Error(`[cloud] GET ${path} fallo (${resp.status})`), { status: resp.status, path });
+  const text = await resp.text();
+  const data = text ? safeJsonParse(text, null) : null;
+  logCloudTransfer('read', path, data, { source: 'fetch', includeToken, status: resp.status });
+  return data;
+}
+
+async function fetchModuleUpdatedAt(moduleName, { includeToken = true, reason = 'poll' } = {}) {
+  const path = CLOUD_MODULE_PATHS[moduleName];
+  if (!path) return 0;
+  const stamp = Number(await cloudReadPath(`${path}/updatedAt`, { includeToken }) || 0);
+  console.info('[cloud][module-stamp]', { moduleName, stamp, reason, cachedStamp: getModuleUpdatedAt(moduleName) });
+  if (stamp) setModuleMeta(moduleName, { updatedAt: stamp, lastStampAt: Date.now(), lastStampReason: reason });
+  return stamp;
+}
+
+async function cloudWritePath(path, value, { method = 'PUT', includeToken = true } = {}) {
+  const url = cloudPathUrl(path, { includeToken });
+  if (!url) throw new Error('[cloud] URL inválida para escritura.');
+  logCloudTransfer('write', path, value, { source: 'fetch', includeToken, method });
+  const resp = await fetch(url, {
+    method,
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(value)
+  });
+  if (!resp.ok) throw Object.assign(new Error(`[cloud] ${method} ${path} fallo (${resp.status})`), { status: resp.status, path, method });
+}
+
+async function commitSaleToFirebaseTransaction(sale) {
+  await ensureCloudSeedData();
+  console.info('[sale][commit] Iniciando confirmación RTDB', saleDebugContext({ saleId: sale?.id, salePreview: sale }));
+  const token = normalizedFirebaseToken();
+  const authModes = token ? [true, false] : [false];
+  let lastError = null;
+  for (const includeToken of authModes) {
+    const modeLabel = includeToken ? 'token' : 'sin-token';
+    try {
+      const saleId = String(sale?.id || '');
+      if (!saleId) throw new Error('sale id requerido');
+      const ts = Date.now();
+      const touchedProducts = new Set();
+      (sale.items || []).forEach((item) => {
+        if (item?.id) touchedProducts.add(String(item.id));
+        const product = state.products.find((p) => String(p?.id || '') === String(item?.id || ''));
+        (product?.combo || []).forEach((comboId) => touchedProducts.add(String(comboId)));
+      });
+      const productsPatch = {};
+      touchedProducts.forEach((id) => {
+        const product = (state.products || []).find((p) => String(p?.id || '') === id);
+        if (product) productsPatch[id] = { ...product };
+      });
+      await cloudWritePath(`operations/sales/${encodeURIComponent(saleId)}`, sale, { includeToken, method: 'PUT' });
+      if (sale?.cashBoxId) await cloudWritePath(`operations/orderCounters/${encodeURIComponent(String(sale.cashBoxId))}`, Number(sale.orderNumber || 0), { includeToken, method: 'PUT' });
+      if (Object.keys(productsPatch).length) await cloudWritePath('catalog/products', productsPatch, { includeToken, method: 'PATCH' });
+      await cloudWritePath('operations/updatedAt', ts, { includeToken, method: 'PUT' });
+      if (Object.keys(productsPatch).length) await cloudWritePath('catalog/updatedAt', ts, { includeToken, method: 'PUT' });
+      console.info('[sale][firebase-write]', { saleId: sale.id, productsTouched: Object.keys(productsPatch).length });
+
+      state.lastSyncAt = Number(ts || Date.now());
+      saveLocalState();
+      console.info('[sale][state-after-write]', { saleId: sale.id, localSalesCount: state.sales?.length || 0, activeCashBoxId: state.activeCashBoxId || '' });
+      console.info('[sale][commit] Venta confirmada en RTDB', { saleId: sale.id, modeLabel });
+      return;
+    } catch (err) {
+      lastError = err;
+      if (includeToken && [401, 403].includes(Number(err?.status || 0))) continue;
+      console.error('[sale][commit] Error confirmando venta en RTDB', { modeLabel, code: err?.code, status: err?.status, stage: err?.stage, message: err?.message, url: err?.url, saleId: sale?.id, context: saleDebugContext() });
+      if (!(includeToken && [401, 403].includes(Number(err?.status || 0)))) break;
     }
-  } catch {}
-  return downloadUrl;
+  }
+  throw lastError || new Error('sale transaction failed');
+}
+
+async function commitCriticalCloudWrites(writeFn, context = {}) {
+  await ensureCloudSeedData();
+  const token = normalizedFirebaseToken();
+  const authModes = token ? [true, false] : [false];
+  let lastError = null;
+  for (const includeToken of authModes) {
+    const modeLabel = includeToken ? 'token' : 'sin-token';
+    try {
+      await writeFn(includeToken);
+      state.lastSyncAt = Date.now();
+      saveLocalState();
+      return;
+    } catch (err) {
+      lastError = err;
+      const status = Number(err?.status || 0);
+      if (includeToken && (status === 401 || status === 403)) continue;
+      console.error('[cloud][commit-critical] error', { modeLabel, status, message: err?.message, context });
+      break;
+    }
+  }
+  throw lastError || new Error('critical cloud commit failed');
+}
+
+function applyCloudData(data) {
+  const normalized = normalizeCloudModules(data);
+  console.info('[users][apply]', { usersCount: Array.isArray(normalized.users) ? normalized.users.length : -1 });
+  console.info('[settings][apply]', { title1: normalized.settings?.title1 || '', hasLogo: Boolean(normalized.settings?.logoDataUrl) });
+  console.info('[billing][apply]', { hasBillingLogo: Boolean(normalized.settings?.billing?.logoDataUrl), billingEnabled: Boolean(normalized.settings?.billing?.enabled) });
+  console.info('[sale][apply]', { salesCount: Array.isArray(normalized.sales) ? normalized.sales.length : -1, activeCashBoxId: normalized.activeCashBoxId || '' });
+  console.info('[debt][apply]', { debtPaymentsCount: Array.isArray(normalized.debtPayments) ? normalized.debtPayments.length : -1 });
+  state.lastSyncAt = Number(normalized.updatedAt || Date.now());
+  state.forceLogoutAt = Number(normalized.forceLogoutAt || 0);
+  ['products','sales','deletedSales','cashClosings','cashSession','users','settings','categories','subcategories','people','stockConfig','outflows','debtPayments','stockWriteOffs','components','componentLinks','componentMoves','cashBoxes','activeCashBoxId','systemStatus','userSalesModes','touchUiConfigByUser','categoryImages','orderCounters','deletedRecordIds','generalCash','generalClosings','cashStateVersion','cashStateUpdatedAt'].forEach((k) => {
+    if (normalized[k] !== undefined) state[k] = normalized[k];
+  });
+  if (state.currentUser && !validateSessionPolicy({ silent: true })) return;
+  normalizeCloudSettings();
+  normalizeWarehouseData();
+  normalizeDebtPaymentsData();
+  normalizePeopleData();
+  normalizeCashState();
+  const removedClosings = new Set((state.deletedRecordIds?.cashClosings || []).map((x) => String(x)));
+  const removedSales = new Set((state.deletedRecordIds?.sales || []).map((x) => String(x)));
+  const removedProducts = new Set((state.deletedRecordIds?.products || []).map((x) => String(x)));
+  const removedCategories = new Set((state.deletedRecordIds?.categories || []).map((x) => String(x).trim()).filter(Boolean));
+  if (removedClosings.size) state.cashClosings = (state.cashClosings || []).filter((x) => !removedClosings.has(String(x?.id || '')));
+  if (removedSales.size) state.sales = (state.sales || []).filter((x) => !removedSales.has(String(x?.id || '')));
+  if (removedProducts.size) state.products = (state.products || []).filter((x) => !removedProducts.has(String(x?.id || '')));
+  if (removedCategories.size) {
+    state.categories = (state.categories || []).filter((category) => !removedCategories.has(String(category || '').trim()));
+    state.products = (state.products || []).map((product) => ((removedCategories.has(String(product?.category || '').trim())) ? { ...product, category: 'Todos' } : product));
+    state.categoryImages = Object.fromEntries(Object.entries(state.categoryImages || {}).filter(([category]) => !removedCategories.has(String(category || '').trim())));
+  }
+  syncAppConfig();
+  saveLocalState();
+  renderOrdersVisibility();
+  renderProducts(); renderOrders(false); renderSalesHistory(); renderDeletedSales(); renderDebtors(); renderDebtPayments(); renderWarehouse(); renderSummary(); renderCashStatus(); renderHomeActions();
+  cloudHydrated = true;
+}
+
+function startFirebaseRealtimeListener(options = {}) {
+  if (typeof EventSource === 'undefined') return;
+  const token = normalizedFirebaseToken();
+  const useToken = Boolean(token) && options.forceNoToken !== true;
+  const url = buildCloudRootUrl({ includeToken: useToken }) || buildCloudRootUrl({ includeToken: false });
+  if (!url || (firebaseRealtimeListener && firebaseRealtimeListenerUrl === url)) return;
+  if (firebaseRealtimeListener) {
+    try { firebaseRealtimeListener.close(); } catch {}
+    firebaseRealtimeListener = null;
+  }
+  firebaseRealtimeListenerUrl = url;
+  try {
+    firebaseRealtimeListener = new EventSource(url);
+    console.info('[cloud][listener] conectado', { url });
+    bootListenerReady = true;
+    console.info('[boot][listener-ready]', { bootListenerReady, url });
+    const handleEvent = (evt) => {
+      let moduleHints = null;
+      try {
+        const payload = JSON.parse(String(evt?.data || '{}'));
+        const path = String(payload?.path || '/');
+        if (path.startsWith('/config')) moduleHints = ['config'];
+        else if (path.startsWith('/catalog')) moduleHints = ['catalog'];
+        else if (path.startsWith('/operations')) moduleHints = ['operations'];
+        else if (path.startsWith('/warehouse')) moduleHints = ['warehouse'];
+        else if (path.startsWith('/history')) moduleHints = ['history'];
+      } catch {}
+      Promise.resolve().then(() => pullFromCloud({ force: true, modules: moduleHints || undefined })).catch(() => {});
+    };
+    firebaseRealtimeListener.addEventListener('put', handleEvent);
+    firebaseRealtimeListener.addEventListener('patch', handleEvent);
+    firebaseRealtimeListener.onerror = () => {
+      console.warn('[cloud][listener] desconectado, reintentando', { url, useToken });
+      try { firebaseRealtimeListener?.close(); } catch {}
+      firebaseRealtimeListener = null;
+      if (realtimeReconnectTimer) clearTimeout(realtimeReconnectTimer);
+      const shouldFallbackNoToken = useToken;
+      realtimeReconnectTimer = setTimeout(() => startFirebaseRealtimeListener({ forceNoToken: shouldFallbackNoToken }), 2500);
+    };
+    console.info('[sync][realtime] Listener RTDB activo', { url, dbPath: state.settings?.firebaseDbPath });
+  } catch (err) {
+    console.error('[sync][realtime] No se pudo iniciar listener RTDB', err);
+  }
 }
 
 async function pullFromCloudWithTimeout(timeoutMs = 1800) {
-  await withTimeout(initializeRealtimeState(), timeoutMs, 'No se pudo hidratar estado desde Firebase.');
+  const pullPromise = pullFromCloud({ force: true, modules: ['operations', 'catalog'] });
+  const timeoutPromise = new Promise((resolve) => setTimeout(resolve, Math.max(300, Number(timeoutMs || 1800))));
+  await Promise.race([pullPromise, timeoutPromise]);
+}
+
+function blobToDataUrl(blob) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result || ''));
+    reader.onerror = () => reject(reader.error || new Error('No se pudo convertir imagen.'));
+    reader.readAsDataURL(blob);
+  });
 }
 
 async function migrateCategoryImageRefsToDataUrls() {
-  return false;
+  const entries = Object.entries(state.categoryImages || {}).filter(([, value]) => String(value || '').startsWith('idb:'));
+  if (!entries.length) return false;
+  let changed = false;
+  for (const [category, ref] of entries) {
+    try {
+      const blob = await imageDbGet(String(ref).slice(4));
+      if (!blob) continue;
+      state.categoryImages[category] = await blobToDataUrl(blob);
+      changed = true;
+    } catch {}
+  }
+  if (changed) persist();
+  return changed;
 }
 
 async function reserveNextOrderNumber(cashBoxId) {
-  if (!cashBoxId) throw new Error('Caja activa no definida para correlativo.');
-  const counterRef = ref(firebaseDb, `${FIREBASE_SHARED_NODE}/orderCounters/${cashBoxId}`);
-  const result = await runTransaction(counterRef, (current) => (Number(current || 0) + 1), { applyLocally: false });
-  if (!result.committed) throw new Error('No se pudo reservar correlativo.');
-  const next = Number(result.snapshot.val() || 0);
-  state.orderCounters = state.orderCounters || {};
-  state.orderCounters[cashBoxId] = next;
-  if (state.cashSession && state.cashSession.id === cashBoxId) state.cashSession.orderCounter = next + 1;
-  return next;
+  await ensureCloudSeedData();
+  console.info('[sale][order-number] Reservando correlativo', saleDebugContext({ cashBoxId }));
+  const fallback = () => {
+    const lastIssued = Number(state.orderCounters?.[cashBoxId] || 0);
+    const sessionCandidate = Number(state.cashSession?.orderCounter || 1);
+    const next = lastIssued > 0 ? (lastIssued + 1) : (sessionCandidate > 0 ? sessionCandidate : 1);
+    state.orderCounters = state.orderCounters || {};
+    state.orderCounters[cashBoxId] = next;
+    if (state.cashSession && state.cashSession.id === cashBoxId) state.cashSession.orderCounter = next + 1;
+    return next;
+  };
+  const root = cloudRootUrl();
+  if (!root || !cashBoxId) {
+    console.error('[sale][order-number] fallback por datos faltantes', saleDebugContext({ cashBoxId, reason: !root ? 'sin_root' : 'sin_cashbox' }));
+    return fallback();
+  }
+  const counterPath = encodeURIComponent(cashBoxId);
+  const counterUrl = root.replace(/\.json(\?.*)?$/, `/operations/orderCounters/${counterPath}.json$1`);
+  for (let attempt = 0; attempt < 5; attempt += 1) {
+    const getResp = await fetch(counterUrl, { headers: { 'X-Firebase-ETag': 'true' } });
+    if (!getResp.ok) {
+      console.error('[sale][order-number] GET counter falló', { status: getResp.status, counterUrl, cashBoxId });
+      break;
+    }
+    const etag = getResp.headers.get('ETag') || '*';
+    const current = Number(await getResp.json()) || 0;
+    const next = current + 1;
+    const putResp = await fetch(counterUrl, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json', 'if-match': etag },
+      body: JSON.stringify(next)
+    });
+    if (putResp.status === 412) continue;
+    if (!putResp.ok) {
+      console.error('[sale][order-number] PUT counter falló', { status: putResp.status, counterUrl, cashBoxId });
+      break;
+    }
+    state.orderCounters = state.orderCounters || {};
+    state.orderCounters[cashBoxId] = next;
+    if (state.cashSession && state.cashSession.id === cashBoxId) state.cashSession.orderCounter = next + 1;
+    return next;
+  }
+  return fallback();
 }
 
 function persist(options = {}) {
   if (state.currentUser && !validateSessionPolicy({ silent: false })) return;
+  if (options.module === 'users') console.info('[users][persist]', { usersCount: state.users?.length || 0 });
+  if (options.module === 'settings') console.info('[settings][persist]', { title1: state.settings?.title1 || '', hasLogo: Boolean(state.settings?.logoDataUrl) });
+  if (options.module === 'sale') console.info('[sale][persist]', { salesCount: state.sales?.length || 0, activeCashBoxId: state.activeCashBoxId || '' });
+  saveLocalState();
   if (options.sync === false) return;
-
-  scheduleCloudSync(document.hidden ? 450 : 120);
+  if (!cloudHydrated) return;
+  scheduleCloudSync(document.hidden ? 1200 : 600, { includeHistory: Boolean(options.includeHistory), modules: options.modules });
 }
 
-async function ensureFirebaseSeedData() {
-  const adminAuthRef = ref(firebaseDb, `${AUTH_USERS_PATH}/admin`);
-  const adminAuthSnap = await get(adminAuthRef);
-  if (!adminAuthSnap.exists()) {
-    await set(adminAuthRef, { password: '5432', role: 'admin', enabled: true, createdAt: new Date().toISOString() });
-  }
-  const adminUserRef = ref(firebaseDb, `${FIREBASE_SHARED_NODE}/users/admin`);
-  const adminUserSnap = await get(adminUserRef);
-  if (!adminUserSnap.exists()) {
-    await set(adminUserRef, {
-      id: 'admin',
-      username: 'admin',
-      password: '5432',
-      role: 'admin',
-      enabled: true,
-      permissions: defaultPermissions(),
-      createdBy: 'system',
-      createdAt: new Date().toISOString(),
-      lastActivityAt: 0,
-      lastLogoutAt: 0
-    });
-  }
-}
-
-async function initializeRealtimeState() {
-  if (realtimeBindingStarted) return;
-  realtimeBindingStarted = true;
-  const rootSnap = await get(realtimeRootRef);
-  if (!rootSnap.exists()) {
-    ensureUsers();
-    ensureSeedData();
-    normalizeCloudSettings();
-    await set(realtimeRootRef, snapshotPayload());
-  }
-  await ensureFirebaseSeedData();
-  const registerCollection = (key, target, { transformIn = (v) => v, sortKey = 'createdAt' } = {}) => {
-    const collectionRef = ref(firebaseDb, `${FIREBASE_SHARED_NODE}/${key}`);
-    const syncTarget = async () => {
-      const snap = await get(collectionRef);
-      state[target] = sortedArrayFromMap(snap.val() || {}, sortKey).map(transformIn);
-      if (key === 'users') state[target] = state[target].map((u) => ({ ...u, username: u.username || u.id })).sort((a,b)=> String(a.username||'').localeCompare(String(b.username||'')));
-    };
-    collectionBindings.set(key, syncTarget);
-    onChildAdded(collectionRef, () => syncTarget().then(handleRemoteMutation));
-    onChildChanged(collectionRef, () => syncTarget().then(handleRemoteMutation));
-    onChildRemoved(collectionRef, () => syncTarget().then(handleRemoteMutation));
-    return syncTarget();
+function cashStatePayloadFromState() {
+  return {
+    cashBoxes: collectionToObjectById(state.cashBoxes || []),
+    activeCashBoxId: state.activeCashBoxId || '',
+    systemStatus: state.systemStatus || 'CAJA_CERRADA',
+    cashSession: state.cashSession || null,
+    generalCash: state.generalCash || { efectivo: 0, qr: 0, estado: 'CERRADA', openedAt: '', closedAt: '', openedBy: '', closedBy: '', updatedAt: 0 },
+    generalClosings: state.generalClosings || [],
+    cashStateVersion: Number(state.cashStateVersion || 0),
+    cashStateUpdatedAt: Number(state.cashStateUpdatedAt || 0),
+    updatedAt: Date.now()
   };
-  await Promise.all([
-    registerCollection('products', 'products'),
-    registerCollection('sales', 'sales'),
-    registerCollection('deletedSales', 'deletedSales'),
-    registerCollection('cashClosings', 'cashClosings'),
-    registerCollection('users', 'users'),
-    registerCollection('people', 'people'),
-    registerCollection('outflows', 'outflows'),
-    registerCollection('debtPayments', 'debtPayments'),
-    registerCollection('components', 'components'),
-    registerCollection('componentMoves', 'componentMoves'),
-    registerCollection('cashBoxes', 'cashBoxes'),
-    registerCollection('queuedOrders', 'queuedOrders')
-  ]);
-  const objectKeys = ['settings','categories','stockConfig','componentLinks','cashSession','activeCashBoxId','systemStatus','forceLogoutAt','userSalesModes','touchUiConfigByUser','categoryImages','orderCounters','deletedRecordIds','removedPeopleIds','updatedAt'];
-  await Promise.all(objectKeys.map(async (key) => {
-    const snap = await get(ref(firebaseDb, `${FIREBASE_SHARED_NODE}/${key}`));
-    if (snap.exists()) state[key] = snap.val();
-  }));
-  objectKeys.forEach((key) => {
-    const nodeRef = ref(firebaseDb, `${FIREBASE_SHARED_NODE}/${key}`);
-    onChildAdded(nodeRef, async () => {
-      const snap = await get(nodeRef); state[key] = snap.val(); handleRemoteMutation();
-    });
-    onChildChanged(nodeRef, async () => {
-      const snap = await get(nodeRef); state[key] = snap.val(); handleRemoteMutation();
-    });
-    onChildRemoved(nodeRef, async () => { state[key] = Array.isArray(state[key]) ? [] : (typeof state[key] === 'object' ? {} : null); handleRemoteMutation(); });
-  });
-  normalizeCloudSettings();
-  normalizeWarehouseData();
-  normalizeDebtPaymentsData();
-  normalizePeopleData();
-  normalizeCashState();
-  syncAppConfig();
-  lastPersistedState = snapshotPayload();
-  firebaseReady = true;
-  handleRemoteMutation();
 }
 
-function handleRemoteMutation() {
-  ensureUsers();
-  normalizeCloudSettings();
-  normalizeWarehouseData();
-  normalizeDebtPaymentsData();
-  normalizePeopleData();
+function applyCashStateSnapshot(snapshot = {}) {
+  state.cashBoxes = normalizeCollectionToArray(snapshot.cashBoxes);
+  state.activeCashBoxId = String(snapshot.activeCashBoxId || '');
+  state.systemStatus = snapshot.systemStatus || 'CAJA_CERRADA';
+  state.cashSession = snapshot.cashSession || null;
+  state.generalCash = (snapshot.generalCash && typeof snapshot.generalCash === 'object')
+    ? { efectivo: 0, qr: 0, estado: 'CERRADA', openedAt: '', closedAt: '', openedBy: '', closedBy: '', updatedAt: 0, ...snapshot.generalCash }
+    : { efectivo: 0, qr: 0, estado: 'CERRADA', openedAt: '', closedAt: '', openedBy: '', closedBy: '', updatedAt: 0 };
+  state.generalClosings = Array.isArray(snapshot.generalClosings) ? snapshot.generalClosings : [];
+  state.cashStateVersion = Number(snapshot.cashStateVersion || state.cashStateVersion || 0);
+  state.cashStateUpdatedAt = Number(snapshot.cashStateUpdatedAt || state.cashStateUpdatedAt || 0);
   normalizeCashState();
-  syncAppConfig();
-  renderPeopleSelectors();
-  renderOrdersVisibility();
-  renderProducts();
-  renderOrders(false);
-  renderSalesHistory();
-  renderDeletedSales();
-  renderDebtors();
-  renderDebtPayments();
-  renderWarehouse();
-  renderSummary();
-  renderCashStatus();
-  renderCashClosings();
-  renderOutflows();
-  renderHomeActions();
-  renderSettings();
-  renderUsers();
-  applyRoute();
+  saveLocalState();
+}
+
+async function pullCashStateFromCloud(reason = 'cash-pull') {
+  if (!state.settings.firebaseDbUrl) return null;
+  await ensureCloudSeedData();
+  const token = normalizedFirebaseToken();
+  const authModes = token ? [true, false] : [false];
+  for (const includeToken of authModes) {
+    try {
+      const operations = await cloudReadPath('operations', { includeToken }) || {};
+      const snapshot = {
+        cashBoxes: operations.cashBoxes || {},
+        activeCashBoxId: operations.activeCashBoxId || '',
+        systemStatus: operations.systemStatus || 'CAJA_CERRADA',
+        cashSession: operations.cashSession || null,
+        generalCash: operations.generalCash || null,
+        generalClosings: operations.generalClosings || [],
+        cashStateVersion: Number(operations.cashStateVersion || 0),
+        cashStateUpdatedAt: Number(operations.cashStateUpdatedAt || 0)
+      };
+      applyCashStateSnapshot(snapshot);
+      markModuleHydrated('operations', true, { source: reason });
+      return snapshot;
+    } catch (err) {
+      if (includeToken && [401, 403].includes(Number(err?.status || 0))) continue;
+      throw err;
+    }
+  }
+  return null;
+}
+
+async function syncCashStateToCloud(reason = 'cash-sync') {
+  if (!state.settings.firebaseDbUrl) return;
+  await ensureCloudSeedData();
+  const token = normalizedFirebaseToken();
+  const authModes = token ? [true, false] : [false];
+  const payload = cashStatePayloadFromState();
+  for (const includeToken of authModes) {
+    try {
+      await cloudWritePath('operations', payload, { includeToken, method: 'PATCH' });
+      recordModuleWrite('operations', payload, reason);
+      markModuleHydrated('operations', true, { source: reason });
+      state.lastSyncAt = Math.max(Number(state.lastSyncAt || 0), Number(payload.updatedAt || 0));
+      saveLocalState();
+      return payload;
+    } catch (err) {
+      if (includeToken && [401, 403].includes(Number(err?.status || 0))) continue;
+      throw err;
+    }
+  }
+  return payload;
 }
 
 function defaultPermissions() {
@@ -813,20 +1576,6 @@ function ensureUsers() {
     lastActivityAt: Number(u.lastActivityAt || 0),
     lastLogoutAt: Number(u.lastLogoutAt || 0)
   }));
-}
-
-function persistCurrentSession() {
-  try {
-    if (state.currentUser) sessionStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(state.currentUser));
-    else sessionStorage.removeItem(SESSION_STORAGE_KEY);
-  } catch (error) {
-    console.warn('[auth] no se pudo persistir la sesión en sessionStorage', error);
-  }
-}
-
-function availableUsersForLogin() {
-  ensureUsers();
-  return Array.isArray(state.users) ? state.users : [];
 }
 
 function currentUserRecord() {
@@ -862,8 +1611,13 @@ function getActiveCashBox() {
     const box = getCashBoxById(state.activeCashBoxId);
     if (box && box.estado === 'ABIERTA') return box;
   }
-  const fallback = (state.cashBoxes || []).find((box) => box.estado === 'ABIERTA') || null;
-  if (fallback) state.activeCashBoxId = fallback.id;
+  const fallback = [...(state.cashBoxes || [])]
+    .filter((box) => box?.estado === 'ABIERTA')
+    .sort((a, b) => cashBoxTimelineValue(b) - cashBoxTimelineValue(a))[0] || null;
+  if (fallback) {
+    state.activeCashBoxId = fallback.id;
+    state.systemStatus = 'CAJA_ABIERTA';
+  }
   return fallback;
 }
 
@@ -872,8 +1626,17 @@ function isCashOpen() {
 }
 
 function salesForActiveCashBox() {
+  const list = Array.isArray(state.sales) ? state.sales : [];
   if (!state.activeCashBoxId) return [];
-  return state.sales.filter((sale) => sale.cashBoxId === state.activeCashBoxId);
+  return list.filter((sale) => sale.cashBoxId === state.activeCashBoxId);
+}
+
+function isSaleAnnulled(sale = {}) {
+  return sale?.saleStatus === 'ANULADA' || Boolean(sale?.annulledAt) || Boolean(sale?.deletedAt);
+}
+
+function isCountableActiveSale(sale = {}) {
+  return !sale?.carryOverDebt && !isSaleAnnulled(sale);
 }
 
 function isSessionExpired() {
@@ -895,7 +1658,8 @@ function markUserActivity(reason = 'actividad') {
   state.currentUser.lastActivityAt = now;
   const user = currentUserRecord();
   if (user) user.lastActivityAt = now;
-  }
+  saveLocalState();
+}
 
 function touchSessionActivity() {
   if (!state.currentUser) return;
@@ -922,14 +1686,16 @@ function validateSessionPolicy({ silent = false } = {}) {
   }
   if (user.enabled === false) {
     user.lastLogoutAt = Date.now();
-        logout('Usuario inhabilitado por administrador.');
+    saveLocalState();
+    logout('Usuario inhabilitado por administrador.');
     return false;
   }
   const loginAt = Number(state.currentUser.loginAt || 0);
   const forcedAt = Number(state.forceLogoutAt || 0);
   if (forcedAt && loginAt && loginAt <= forcedAt) {
     user.lastLogoutAt = Date.now();
-        logout('La caja fue cerrada globalmente. Debes iniciar sesión nuevamente.');
+    saveLocalState();
+    logout('La caja fue cerrada globalmente. Debes iniciar sesión nuevamente.');
     return false;
   }
   const last = Math.max(
@@ -939,7 +1705,8 @@ function validateSessionPolicy({ silent = false } = {}) {
   );
   if (last && (Date.now() - last) >= SESSION_INACTIVITY_LIMIT_MS) {
     user.lastLogoutAt = Date.now();
-        logout('Sesión expirada por inactividad (3 horas).');
+    saveLocalState();
+    logout('Sesión expirada por inactividad (3 horas).');
     return false;
   }
   if (!silent) markUserActivity('request');
@@ -958,8 +1725,8 @@ function normalizeCashState() {
   if (!Array.isArray(state.cashBoxes)) state.cashBoxes = [];
   const openBoxes = state.cashBoxes.filter((box) => box.estado === 'ABIERTA');
   if (openBoxes.length > 1) {
-    const keep = openBoxes[0];
-    state.cashBoxes = state.cashBoxes.map((box, idx) => (idx > 0 && box.estado === 'ABIERTA' ? { ...box, estado: 'CERRADA', fecha_cierre: box.fecha_cierre || new Date().toISOString() } : box));
+    const keep = [...openBoxes].sort((a, b) => cashBoxTimelineValue(b) - cashBoxTimelineValue(a))[0];
+    state.cashBoxes = state.cashBoxes.map((box) => (box.estado === 'ABIERTA' && box.id !== keep.id ? { ...box, estado: 'CERRADA', fecha_cierre: box.fecha_cierre || new Date().toISOString() } : box));
     state.activeCashBoxId = keep.id;
   }
   const activeCash = getActiveCashBox();
@@ -974,6 +1741,16 @@ function normalizeCashState() {
       state.cashSession = { id: activeCash.id, openedAt: activeCash.fecha_apertura, openingCash: Number(activeCash.openingCash || 0), orderCounter: 1 };
     }
   }
+  state.cashStateVersion = Math.max(Number(state.cashStateVersion || 0), Number(state.cashStateUpdatedAt || 0), Number(state.generalCash?.updatedAt || 0), 0);
+  state.cashStateUpdatedAt = Math.max(Number(state.cashStateUpdatedAt || 0), Number(state.generalCash?.updatedAt || 0), 0);
+}
+
+function bumpCashStateVersion(reason = 'cash-state') {
+  const ts = Date.now();
+  state.cashStateVersion = Math.max(Number(state.cashStateVersion || 0), ts);
+  state.cashStateUpdatedAt = ts;
+  console.info('[cash][version]', { reason, cashStateVersion: state.cashStateVersion, cashStateUpdatedAt: state.cashStateUpdatedAt });
+  return ts;
 }
 
 function ensureSeedData() {
@@ -981,15 +1758,38 @@ function ensureSeedData() {
   if (!state.categories.includes('Todos')) state.categories.unshift('Todos');
   if (!Array.isArray(state.products) || !state.products.length) {
     state.products = [
-      { id: uid(), category: 'Bebidas', name: 'Mocochinchi', price: 5, hidden: false },
-      { id: uid(), category: 'Comidas', name: 'Sandwich', price: 12, hidden: false }
+      { id: uid(), category: 'Bebidas', name: 'Mocochinchi', cost: 0, price: 5, hidden: false },
+      { id: uid(), category: 'Comidas', name: 'Sandwich', cost: 0, price: 12, hidden: false }
     ];
   }
 }
 
 
 function ensureProductStockDefaults() {
-  state.products = (state.products || []).map((p) => ({ ...p, stockCurrent: Number(p.stockCurrent || 0) }));
+  state.products = (state.products || []).map((p, index) => ({ ...p, stockCurrent: Number(p.stockCurrent || 0), cost: Math.max(0, Number(p.cost || 0)), stockMin: Math.max(0, Number((p.stockMin ?? appConfig.stockMinimo ?? 0))), stockEnabled: p.stockEnabled !== false, sortOrder: Number.isFinite(Number(p.sortOrder)) ? Number(p.sortOrder) : index }));
+  state.stockWriteOffs = Array.isArray(state.stockWriteOffs) ? state.stockWriteOffs : [];
+}
+
+function nextProductSortOrderForCategory(category = '') {
+  const list = (state.products || []).filter((p) => String(p.category || '') === String(category || ''));
+  if (!list.length) return 1;
+  return Math.max(...list.map((p) => Number(p.sortOrder || 0)), 0) + 1;
+}
+
+function restoreDeletedCategory(category = '') {
+  const key = String(category || '').trim();
+  if (!key) return;
+  state.deletedRecordIds = state.deletedRecordIds || { cashClosings: [], sales: [], products: [], categories: [] };
+  if (!Array.isArray(state.deletedRecordIds.categories)) state.deletedRecordIds.categories = [];
+  state.deletedRecordIds.categories = state.deletedRecordIds.categories.filter((item) => String(item || '').trim() !== key);
+}
+
+function isProductStockTracked(product) {
+  return isStockEnabled() && product?.stockEnabled !== false;
+}
+
+function productStockMin(product) {
+  return Math.max(0, Number((product?.stockMin ?? appConfig.stockMinimo ?? 0)));
 }
 
 
@@ -1008,6 +1808,8 @@ function ensurePeopleData() {
     changed = true;
     return { id: uid(), ...person };
   });
+  if (changed) saveLocalState();
+}
 
 function currentSalesMode() {
   const username = state.currentUser?.username || '';
@@ -1074,7 +1876,7 @@ function renderCart() {
 
 function renderSaleSelectors() {
   if (!saleCategoryButtons || !saleCategorySelectors) return;
-  const cats = [...new Set(state.products.filter((p) => !p.hidden).map((p) => p.category))];
+  const cats = getOrderedCategories({ includeHidden: false }).filter((category) => state.products.some((p) => !p.hidden && p.category === category));
   if (!cats.length) {
     saleCategoryButtons.innerHTML = '<p>Sin categorías.</p>';
     saleCategorySelectors.innerHTML = '';
@@ -1093,8 +1895,8 @@ function renderSaleSelectors() {
   const list = activeSaleCategory ? state.products.filter((p) => {
     if (p.hidden || p.category !== activeSaleCategory) return false;
     if (!isStockEnabled()) return true;
-    return Number(p.stockCurrent || 0) > 0;
-  }) : [];
+    return !isProductStockTracked(p) || Number(p.stockCurrent || 0) > 0;
+  }).sort((a, b) => Number(a.sortOrder || 0) - Number(b.sortOrder || 0)) : [];
   saleCategorySelectors.innerHTML = `<div class="card grid4"><label>Producto<select id="catProductSel"><option value="">Selecciona un producto</option>${list.map((p) => { const stock = Number(p.stockCurrent || 0); const noStock = isStockEnabled() && stock <= 0; const lowStock = isStockEnabled() && stock > 0 && stock <= Number(appConfig.stockMinimo || 0); const suffix = isStockEnabled() ? (noStock ? ' (Sin stock)' : (lowStock ? ` (Stock = ${stock})` : '')) : ''; const style = isStockEnabled() ? (noStock ? 'color:#c62f2f;' : (lowStock ? 'color:#b26a00;' : '')) : ''; return `<option value="${p.id}" ${noStock ? 'disabled' : ''} style="${style}">${p.name}${suffix} · ${money(p.price)}</option>`; }).join('')}</select></label><label>Cantidad<input id="catQty" type="number" min="1" step="1" value="1" /></label><label>Subtotal<input id="catSub" type="text" readonly value="${money(0)}" /></label><button id="catAdd" class="primary" type="button">Añadir</button></div>`;
   const sel = $('catProductSel');
   const qty = $('catQty');
@@ -1109,8 +1911,8 @@ function renderSaleSelectors() {
     const p = state.products.find((x) => x.id === sel?.value);
     const q = Math.max(1, Number(qty?.value || 1));
     if (!p) return alert('Selecciona un producto.');
-    if (isStockEnabled() && q > Number(p.stockCurrent || 0)) return alert('Cantidad solicitada supera el stock disponible.');
-    if (isStockEnabled() && Array.isArray(p.combo) && p.combo.length) {
+    if (isProductStockTracked(p) && q > Number(p.stockCurrent || 0)) return alert('Cantidad solicitada supera el stock disponible.');
+    if (isProductStockTracked(p) && Array.isArray(p.combo) && p.combo.length) {
       const req = comboComponentRequirements(p, q);
       const missing = [...req.entries()].find(([componentId, neededQty]) => {
         const component = state.products.find((x) => x.id === componentId);
@@ -1126,7 +1928,7 @@ function renderSaleSelectors() {
       e.qty += q;
       const total = Number(e.price || 0) * Number(e.qty || 0);
       e.finalSubtotal = total - (total * Number(e.discountPct || 0) / 100);
-    } else state.currentCart.push({ id: p.id, name: p.name, price: Number(p.price || 0), qty: q, discountPct: 0, finalSubtotal: Number(p.price || 0) * q });
+    } else state.currentCart.push({ id: p.id, name: p.name, cost: Number(p.cost || 0), price: Number(p.price || 0), qty: q, discountPct: 0, finalSubtotal: Number(p.price || 0) * q });
     activeSaleCategory = '';
     renderSaleSelectors();
     renderCart();
@@ -1159,7 +1961,7 @@ function openSalesModeScreen() {
   const overlay = document.createElement('div');
   overlay.id = 'salesModeOverlay';
   overlay.className = 'modal';
-  overlay.innerHTML = `<div class="modal-card"><h3>Modo de ventas</h3><div class="grid2"><button id="activateGenericModeBtn" class="${mode === 'generic' ? 'primary' : 'secondary'}" type="button">${mode === 'generic' ? 'Desactivar' : 'Activar'} modo genérico</button><button id="activateTouchModeBtn" class="${mode === 'touch' ? 'primary' : 'secondary'}" type="button">${mode === 'touch' ? 'Desactivar' : 'Activar'} modo táctil</button></div><div id="touchModeConfigWrap" class="${mode === 'touch' ? '' : 'hidden'}"><h4>Configuración modo táctil</h4><div class="grid2"><label>Tamaño o estilo visual<select id="touchGridPresetSel"><option value="2x3">2x3</option><option value="3x2">3x2</option><option value="3x3">3x3</option><option value="4x2">4x2</option><option value="4x3">4x3</option><option value="4x4">4x4</option><option value="2x4">2x4</option><option value="5x3">5x3</option><option value="5x4">5x4</option></select></label><label>Lista de compras<select id="touchCartPosSel"><option value="left">Lateral izquierdo</option><option value="right">Lateral derecho</option><option value="bottom">Abajo</option></select></label></div></div><button id="closeSalesModeOverlayBtn" class="secondary" type="button">Cerrar</button></div>`;
+  overlay.innerHTML = `<div class="modal-card"><h3>Modo de ventas</h3><div class="grid2"><button id="activateGenericModeBtn" class="${mode === 'generic' ? 'primary' : 'secondary'}" type="button">${mode === 'generic' ? 'Desactivar' : 'Activar'} modo genérico</button><button id="activateTouchModeBtn" class="${mode === 'touch' ? 'primary' : 'secondary'}" type="button">${mode === 'touch' ? 'Desactivar' : 'Activar'} modo táctil</button></div><div id="touchModeConfigWrap" class="${mode === 'touch' ? '' : 'hidden'}"><h4>Configuración modo táctil</h4><div class="grid2"><label>Tamaño o estilo visual<select id="touchGridPresetSel"><option value="2x3">2x3</option><option value="3x2">3x2</option><option value="3x3">3x3</option><option value="3x4">3x4</option><option value="4x2">4x2</option><option value="4x3">4x3</option><option value="4x4">4x4</option><option value="2x4">2x4</option><option value="5x3">5x3</option><option value="5x4">5x4</option></select></label><label>Lista de compras<select id="touchCartPosSel"><option value="left">Lateral izquierdo</option><option value="right">Lateral derecho</option><option value="bottom">Abajo</option></select></label></div></div><button id="closeSalesModeOverlayBtn" class="secondary" type="button">Cerrar</button></div>`;
   document.body.appendChild(overlay);
   const gridSel = document.getElementById('touchGridPresetSel');
   const posSel = document.getElementById('touchCartPosSel');
@@ -1216,11 +2018,11 @@ function renderTouchSaleUi() {
   }
   const cfg = getTouchUiConfig();
   const cap = touchGridCapacity();
-  const cats = [...new Set(state.products.filter((p) => !p.hidden).map((p) => p.category))];
+  const cats = getOrderedCategories({ includeHidden: false }).filter((category) => state.products.some((p) => !p.hidden && p.category === category));
   state.touchUiState = state.touchUiState || { view: 'categories', category: '', page: 0 };
   const ui = state.touchUiState;
-  if (!cats.includes(ui.category)) { ui.category = ''; ui.view = 'categories'; ui.page = 0; }
-  const list = ui.view === 'categories' ? cats : state.products.filter((p) => !p.hidden && p.category === ui.category).filter((p) => !isStockEnabled() || Number(p.stockCurrent || 0) > 0);
+  if (ui.view === 'products' && !cats.includes(ui.category)) { ui.category = ''; ui.view = 'categories'; ui.page = 0; }
+  const list = ui.view === 'categories' ? cats : state.products.filter((p) => !p.hidden && p.category === ui.category).filter((p) => !isStockEnabled() || !isProductStockTracked(p) || Number(p.stockCurrent || 0) > 0).sort((a, b) => Number(a.sortOrder || 0) - Number(b.sortOrder || 0));
   const pages = Math.max(1, Math.ceil(list.length / cap));
   if (ui.page >= pages) ui.page = 0;
   const pageItems = list.slice(ui.page * cap, (ui.page + 1) * cap);
@@ -1235,12 +2037,12 @@ function renderTouchSaleUi() {
     const hasImg = Boolean(productSrc);
     const img = productSrc ? `<img class=\"touch-media\" src=\"${productSrc}\" alt=\"${item.name}\" loading=\"lazy\" />` : '';
     const stock = Number(item.stockCurrent || 0);
-    const lowStock = isStockEnabled() && stock > 0 && stock <= Number(appConfig.stockMinimo || 0);
+    const lowStock = isProductStockTracked(item) && stock > 0 && stock <= productStockMin(item);
     const stockBadge = lowStock ? `<small class=\"stock-warning\">Stock: ${stock}</small>` : '';
     return `<button class="touch-card ${hasImg ? 'with-image' : 'no-image'} ${lowStock ? 'stock-empty' : ''}" data-touch-prod="${item.id}" type="button">${img}<strong class="touch-card-title">${item.name}</strong><span class="touch-card-price">${money(item.price)}</span>${stockBadge}</button>`;
   };
   host.className = `touch-sales-layout cart-${cfg.cartPosition}`;
-  host.innerHTML = `<div class="touch-main"><div class="touch-toolbar">${ui.view === 'products' ? '<button id="touchBackToCats" class="secondary" type="button">Volver a categorías</button>' : '<span></span>'}<div class="touch-pager"><button id="touchPrevPage" class="secondary" type="button">◀</button><span>Página ${ui.page + 1}/${pages}</span><button id="touchNextPage" class="secondary" type="button">▶</button></div></div><div class="touch-grid" style="--touch-cols:${getTouchUiConfig().grid.split('x')[0]};">${pageItems.map(renderCard).join('')}</div></div><aside class="touch-cart"><h3>Lista de compras</h3><div class="touch-cart-items">${state.currentCart.length ? state.currentCart.map((i) => `<div class="touch-cart-item"><div><strong>${i.name}</strong><small>${money(i.price)} c/u · Total ${money(Number(i.finalSubtotal ?? (i.price*i.qty)))}</small></div><div class="touch-qty"><button data-touch-dec="${i.id}" type="button">-</button><span>${i.qty}</span><button data-touch-inc="${i.id}" type="button">+</button><button data-touch-tools="${i.id}" type="button">🛠</button><button data-touch-rm="${i.id}" type="button">✕</button></div></div>`).join('') : '<p>Sin productos añadidos.</p>'}</div><div class="touch-summary"><p>Subtotal: ${money(saleTotals().gross)}</p><p>Descuento: ${money(saleTotals().discount)}</p><p><strong>Total: ${money(saleTotals().final)}</strong></p></div><button id="touchProceedPayBtn" class="primary" type="button">Proceder con el pago</button><div class="grid2"><button id="touchQueueBtn" class="secondary" type="button">Añadir a la cola</button><button id="touchQueuedBtn" class="secondary" type="button">Ver pedidos pendientes</button></div><div class="touch-finance"><small>Total de caja: ${cashTotalBox?.textContent || money(0)}</small><small>Cambio final más efectivo del día: ${summaryFinalCash?.textContent || money(0)}</small><small>Total de QR del día: ${summaryFinalQr?.textContent || money(0)}</small></div></aside>`;
+  host.innerHTML = `<div class="touch-main"><div class="touch-toolbar">${ui.view === 'products' ? '<button id="touchBackToCats" class="secondary" type="button">Volver a categorías</button>' : '<span></span>'}<div class="touch-pager"><button id="touchPrevPage" class="secondary" type="button">◀</button><span>Página ${ui.page + 1}/${pages}</span><button id="touchNextPage" class="secondary" type="button">▶</button></div></div><div class="touch-grid" style="--touch-cols:${getTouchUiConfig().grid.split('x')[0]};">${pageItems.map(renderCard).join('')}</div></div><aside class="touch-cart"><h3>Lista de compras</h3><div class="touch-cart-items">${state.currentCart.length ? state.currentCart.map((i) => `<div class="touch-cart-item"><div><strong>${i.name}</strong><small>${money(i.price)} c/u · Costo ${money(Number(i.cost || 0))} · Total ${money(Number(i.finalSubtotal ?? (i.price*i.qty)))}</small></div><div class="touch-qty"><button data-touch-dec="${i.id}" type="button">-</button><span>${i.qty}</span><button data-touch-inc="${i.id}" type="button">+</button><button data-touch-tools="${i.id}" type="button">🛠</button><button data-touch-rm="${i.id}" type="button">✕</button></div></div>`).join('') : '<p>Sin productos añadidos.</p>'}</div><div class="touch-summary"><p>Subtotal: ${money(saleTotals().gross)}</p><p>Descuento: ${money(saleTotals().discount)}</p><p><strong>Total: ${money(saleTotals().final)}</strong></p></div><button id="touchProceedPayBtn" class="primary" type="button">Proceder con el pago</button><div class="grid2"><button id="touchQueueBtn" class="secondary" type="button">Añadir a la cola</button><button id="touchQueuedBtn" class="secondary" type="button">Ver pedidos pendientes</button></div><div class="touch-finance"><small>Total de caja: ${cashTotalBox?.textContent || money(0)}</small><small>Cambio final más efectivo del día: ${summaryFinalCash?.textContent || money(0)}</small><small>Total de QR del día: ${summaryFinalQr?.textContent || money(0)}</small></div></aside>`;
 
   host.querySelector('#touchBackToCats')?.addEventListener('click', () => { ui.view = 'categories'; ui.page = 0; renderTouchSaleUi(); });
   host.querySelector('#touchPrevPage')?.addEventListener('click', () => { ui.page = (ui.page - 1 + pages) % pages; renderTouchSaleUi(); });
@@ -1249,9 +2051,9 @@ function renderTouchSaleUi() {
   host.querySelectorAll('[data-touch-prod]').forEach((b) => b.addEventListener('click', () => {
     const p = state.products.find((x) => x.id === b.dataset.touchProd);
     if (!p) return;
-    if (isStockEnabled() && Number(p.stockCurrent || 0) <= 0) return alert('Producto sin stock disponible.');
+    if (isProductStockTracked(p) && Number(p.stockCurrent || 0) <= 0) return alert('Producto sin stock disponible.');
     const e = state.currentCart.find((i) => i.id === p.id);
-    if (e) e.qty += 1; else state.currentCart.push({ id: p.id, name: p.name, price: Number(p.price || 0), qty: 1, discountPct: 0, finalSubtotal: Number(p.price || 0) });
+    if (e) e.qty += 1; else state.currentCart.push({ id: p.id, name: p.name, cost: Number(p.cost || 0), price: Number(p.price || 0), qty: 1, discountPct: 0, finalSubtotal: Number(p.price || 0) });
     const item = state.currentCart.find((i) => i.id === p.id);
     const total = item.price * item.qty;
     item.finalSubtotal = total - (total * (item.discountPct || 0) / 100);
@@ -1261,7 +2063,7 @@ function renderTouchSaleUi() {
     renderCart();
     renderTouchSaleUi();
   }));
-  host.querySelectorAll('[data-touch-inc]').forEach((b) => b.addEventListener('click', () => { const i = state.currentCart.find((x) => x.id === b.dataset.touchInc); if (!i) return; const p = state.products.find((x) => x.id === i.id); if (isStockEnabled() && Number(i.qty || 0) >= Number(p?.stockCurrent || 0)) return alert('Stock insuficiente para agregar producto.'); i.qty += 1; i.finalSubtotal = i.price*i.qty - (i.price*i.qty*(i.discountPct||0)/100); renderCart(); renderTouchSaleUi(); }));
+  host.querySelectorAll('[data-touch-inc]').forEach((b) => b.addEventListener('click', () => { const i = state.currentCart.find((x) => x.id === b.dataset.touchInc); if (!i) return; const p = state.products.find((x) => x.id === i.id); if (isProductStockTracked(p) && Number(i.qty || 0) >= Number(p?.stockCurrent || 0)) return alert('Stock insuficiente para agregar producto.'); i.qty += 1; i.finalSubtotal = i.price*i.qty - (i.price*i.qty*(i.discountPct||0)/100); renderCart(); renderTouchSaleUi(); }));
   host.querySelectorAll('[data-touch-dec]').forEach((b) => b.addEventListener('click', () => { const i = state.currentCart.find((x) => x.id === b.dataset.touchDec); if (!i) return; i.qty = Math.max(1, i.qty-1); i.finalSubtotal = i.price*i.qty - (i.price*i.qty*(i.discountPct||0)/100); renderCart(); renderTouchSaleUi(); }));
   host.querySelectorAll('[data-touch-rm]').forEach((b) => b.addEventListener('click', () => { state.currentCart = state.currentCart.filter((x) => x.id !== b.dataset.touchRm); renderCart(); renderTouchSaleUi(); }));
   host.querySelectorAll('[data-touch-tools]').forEach((b) => b.addEventListener('click', () => openTouchItemTools(b.dataset.touchTools)));
@@ -1290,10 +2092,58 @@ function syncSaleUiModeVisibility() {
   setSaleModeDomVisibility();
 }
 
-function openImageDb() { return null; }
-async function imageDbPut() { return null; }
-async function imageDbGet() { return null; }
-async function imageDbDelete() { return null; }
+function openImageDb() {
+  if (imageDbPromise) return imageDbPromise;
+  imageDbPromise = new Promise((resolve, reject) => {
+    const req = indexedDB.open(IMAGE_DB_NAME, 1);
+    req.onupgradeneeded = () => {
+      const db = req.result;
+      if (!db.objectStoreNames.contains(IMAGE_DB_STORE)) db.createObjectStore(IMAGE_DB_STORE);
+    };
+    req.onsuccess = () => {
+      const db = req.result;
+      db.onclose = () => { imageDbPromise = null; };
+      resolve(db);
+    };
+    req.onerror = () => {
+      imageDbPromise = null;
+      reject(req.error || new Error('No se pudo abrir IndexedDB de imágenes.'));
+    };
+  });
+  return imageDbPromise;
+}
+
+async function imageDbPut(key, blob) {
+  const db = await openImageDb();
+  await new Promise((resolve, reject) => {
+    const tx = db.transaction(IMAGE_DB_STORE, 'readwrite');
+    tx.objectStore(IMAGE_DB_STORE).put(blob, key);
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error || new Error('Error guardando imagen en IndexedDB.'));
+  });
+}
+
+async function imageDbGet(key) {
+  const db = await openImageDb();
+  const out = await new Promise((resolve, reject) => {
+    const tx = db.transaction(IMAGE_DB_STORE, 'readonly');
+    const req = tx.objectStore(IMAGE_DB_STORE).get(key);
+    req.onsuccess = () => resolve(req.result || null);
+    req.onerror = () => reject(req.error || new Error('Error leyendo imagen de IndexedDB.'));
+  });
+  return out;
+}
+
+async function imageDbDelete(key) {
+  if (!key) return;
+  const db = await openImageDb();
+  await new Promise((resolve, reject) => {
+    const tx = db.transaction(IMAGE_DB_STORE, 'readwrite');
+    tx.objectStore(IMAGE_DB_STORE).delete(key);
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error || new Error('Error eliminando imagen de IndexedDB.'));
+  });
+}
 
 function scheduleImageUiRefresh({ products = false, touch = false } = {}) {
   if (scheduledImageUiRefresh) return;
@@ -1305,25 +2155,25 @@ function scheduleImageUiRefresh({ products = false, touch = false } = {}) {
 }
 
 function imageRefKey(value) {
-  return '';
+  return String(value || '').startsWith('idb:') ? String(value).slice(4) : '';
 }
 
 function clearImageMissingRef(value) {
   const raw = String(value || '');
-  if (!raw) return;
+  if (!raw || !raw.startsWith('idb:')) return;
   delete imageMissingRefs[raw];
 }
 
 function markImageMissingRef(value) {
   const raw = String(value || '');
-  if (!raw) return;
+  if (!raw || !raw.startsWith('idb:')) return;
   const prev = imageMissingRefs[raw] || { attempts: 0, lastAttemptAt: 0, missing: false };
   imageMissingRefs[raw] = { missing: true, attempts: Number(prev.attempts || 0) + 1, lastAttemptAt: Date.now() };
 }
 
 function forceRetryImageRef(value) {
   const raw = String(value || '');
-  if (!raw) return;
+  if (!raw || !raw.startsWith('idb:')) return;
   clearImageMissingRef(raw);
   delete imageLoadInFlight[raw];
   resolveImageSource(raw);
@@ -1396,7 +2246,8 @@ function persistImageChange(onRollback) {
   try {
     // Guardado local directo para evitar estados "subidos" que luego se pierden.
     state.lastSyncAt = Math.max(Number(state.lastSyncAt || 0), Date.now());
-        // Sincronización remota en segundo plano (no bloqueante).
+    saveLocalState();
+    // Sincronización remota en segundo plano (no bloqueante).
     scheduleCloudSync(document.hidden ? 3500 : 1200);
     return true;
   } catch (error) {
@@ -1527,7 +2378,7 @@ function openImageUploadForCategory(categoryName) {
 function renderOrders(finalized = false) {
   if (!ordersTable) return;
   const q = (orderSearchInput?.value || '').trim();
-  const base = salesForActiveCashBox().filter((sale) => !sale.carryOverDebt).slice();
+  const base = salesForActiveCashBox().filter((sale) => isCountableActiveSale(sale)).slice();
   let pending = base.filter((s) => s.orderStatus !== 'finalizado');
   let done = base.filter((s) => s.orderStatus === 'finalizado');
   if (q) {
@@ -1632,20 +2483,17 @@ function applySettings() {
   }
   renderBillingPreview();
   if (state.settings.logoDataUrl && homeLogo && logoPlaceholder) {
+    console.info('[settings][logo-apply]', { target: 'home', hasLogo: true });
     homeLogo.src = state.settings.logoDataUrl;
     homeLogo.classList.remove('hidden');
     logoPlaceholder.classList.add('hidden');
   }
   if (state.settings.logoDataUrl && posHeaderLogo) {
+    console.info('[settings][logo-apply]', { target: 'pos', hasLogo: true });
     posHeaderLogo.src = state.settings.logoDataUrl;
     posHeaderLogo.classList.remove('hidden');
   }
-}
-function renderSettings() {
-  applySettings();
-  if (firebaseDbUrlInput) { firebaseDbUrlInput.value = FIREBASE_DB_URL; firebaseDbUrlInput.readOnly = true; }
-  if (firebaseDbTokenInput) { firebaseDbTokenInput.value = FIREBASE_TOKEN; firebaseDbTokenInput.readOnly = true; }
-  if (firebaseDbPathInput) { firebaseDbPathInput.value = FIREBASE_SHARED_NODE; firebaseDbPathInput.readOnly = true; }
+  console.info('[settings][logo-render]', { hasLogo: Boolean(state.settings.logoDataUrl), homeHidden: homeLogo?.classList.contains('hidden'), posHidden: posHeaderLogo?.classList.contains('hidden') });
 }
 
 function renderCashStatus() {
@@ -1669,6 +2517,8 @@ function getClosingAggregates(closing) {
   const sales = Array.isArray(closing?.salesSnapshot) ? closing.salesSnapshot : [];
   const productsMap = new Map();
   let qtyTotal = 0;
+  let totalCost = 0;
+  let totalRevenue = 0;
   let saleMax = 0;
   let saleMin = sales.length ? Number(sales[0].total || 0) : 0;
   sales.forEach((sale) => {
@@ -1677,14 +2527,21 @@ function getClosingAggregates(closing) {
     saleMin = Math.min(saleMin, total);
     (sale.items || []).forEach((it) => {
       const name = it.name || 'Producto';
-      if (!productsMap.has(name)) productsMap.set(name, { qty: 0, total: 0 });
+      if (!productsMap.has(name)) productsMap.set(name, { qty: 0, total: 0, cost: 0 });
       const row = productsMap.get(name);
+      const qty = Number(it.qty || 0);
+      const lineTotal = Number((it.finalSubtotal ?? (it.price * it.qty)) || 0);
+      const unitCost = Math.max(0, Number((it.cost ?? state.products.find((p) => p.id === it.id)?.cost ?? 0)));
+      const lineCost = unitCost * qty;
       row.qty += Number(it.qty || 0);
-      row.total += Number((it.finalSubtotal ?? (it.price * it.qty)) || 0);
-      qtyTotal += Number(it.qty || 0);
+      row.total += lineTotal;
+      row.cost += lineCost;
+      qtyTotal += qty;
+      totalRevenue += lineTotal;
+      totalCost += lineCost;
     });
   });
-  const products = [...productsMap.entries()].map(([name, row]) => ({ name, ...row })).sort((a,b)=>b.qty-a.qty);
+  const products = [...productsMap.entries()].map(([name, row]) => ({ name, ...row, profit: row.total - row.cost })).sort((a,b)=>b.qty-a.qty);
   const topByQty = products[0] || null;
   const topByAmount = products.slice().sort((a,b)=>b.total-a.total)[0] || null;
   const net = Number(closing.cashIn || 0) + Number(closing.qrIn || 0);
@@ -1715,7 +2572,10 @@ function getClosingAggregates(closing) {
     cash: Number(closing.cashIn || 0),
     qr: Number(closing.qrIn || 0),
     transfer: Number(closing.transferIn || 0),
-    others: Math.max(0, net - Number(closing.cashIn || 0) - Number(closing.qrIn || 0) - Number(closing.transferIn || 0))
+    others: Math.max(0, net - Number(closing.cashIn || 0) - Number(closing.qrIn || 0) - Number(closing.transferIn || 0)),
+    totalCost,
+    totalRevenue,
+    totalProfit: totalRevenue - totalCost
   };
 }
 
@@ -1760,16 +2620,23 @@ async function downloadClosingPdf(closingId) {
     ];
     doc.autoTable({ startY: y0 + 18, head: [['Información general', 'Valor']], body: general, theme: 'grid' });
     const fy = doc.lastAutoTable.finalY + 4;
+    const debtPayments = Array.isArray(closing.debtPaymentsSnapshot) ? closing.debtPaymentsSnapshot.filter((p) => !p?.anulado) : [];
+    const debtCash = debtPayments.reduce((sum, pay) => sum + Number(pay.cashAmount || (pay.method === 'efectivo' ? pay.amount : 0) || 0), 0);
+    const debtQr = debtPayments.reduce((sum, pay) => sum + Number(pay.qrAmount || (pay.method === 'qr' ? pay.amount : 0) || 0), 0);
+    const totalCash = Number(closing.cashIn || 0) + debtCash;
+    const totalQr = Number(closing.qrIn || 0) + debtQr;
     const fin = [
       ['Monto inicial', money(agg.opening)],
-      ['Total ventas brutas', money(agg.net)],
+      ['Ventas registradas', money(Number(closing.cashIn || 0) + Number(closing.qrIn || 0))],
+      ['Pagos de deuda recibidos', money(debtCash + debtQr)],
+      ['Total ventas brutas', money(agg.net + debtCash + debtQr)],
       ['Total descuentos', money(Number(closing.discountTotal || 0))],
-      ['Total ingresos netos', money(agg.net)],
-      ['Total efectivo', money(agg.cash)],
-      ['Total QR', money(agg.qr)],
+      ['Total ingresos netos', money(agg.net + debtCash + debtQr)],
+      ['Total efectivo', money(totalCash)],
+      ['Total QR', money(totalQr)],
       ['Total salidas', money(agg.outTotal)],
       ['Total entradas', money(agg.inTotal)],
-      ['Total esperado', money(agg.expected)],
+      ['Total esperado', money(agg.expected + debtCash)],
       ['Total contado', money(agg.counted)]
     ];
     doc.autoTable({ startY: fy, head: [['Resumen financiero', 'Valor']], body: fin, theme: 'grid' });
@@ -1783,14 +2650,15 @@ async function downloadClosingPdf(closingId) {
     ];
     doc.autoTable({ startY: oy, head: [['Métricas operativas', 'Valor']], body: ops, theme: 'grid' });
     doc.addPage();
-    doc.autoTable({ startY: 12, head: [['Producto', 'Cantidad', 'Total generado']], body: agg.products.map((p)=>[p.name, String(p.qty), money(p.total)]), theme: 'grid' });
+    doc.autoTable({ startY: 12, head: [['Producto', 'Cantidad', 'Costo', 'Ganancia', 'Total']], body: agg.products.map((p)=>[p.name, String(p.qty), money(p.cost || 0), money(p.profit || 0), money(p.total)]), theme: 'grid' });
+    doc.autoTable({ startY: doc.lastAutoTable.finalY + 3, head: [['Totales', 'Valor']], body: [['Costo total', money(agg.totalCost || 0)], ['Ganancia total', money(agg.totalProfit || 0)], ['Entrada total', money(agg.totalRevenue || 0)]], theme: 'grid' });
     const py = doc.lastAutoTable.finalY + 4;
     const totalNet = Math.max(1, agg.net);
     const mpay = [
-      ['Efectivo', `${money(agg.cash)} (${((agg.cash/totalNet)*100).toFixed(1)}%)`],
-      ['Transferencia', `${money(agg.transfer)} (${((agg.transfer/totalNet)*100).toFixed(1)}%)`],
-      ['QR', `${money(agg.qr)} (${((agg.qr/totalNet)*100).toFixed(1)}%)`],
-      ['Otros', `${money(agg.others)} (${((agg.others/totalNet)*100).toFixed(1)}%)`]
+      ['Efectivo', `${money(totalCash)} (${((totalCash/Math.max(1,totalCash + totalQr + agg.transfer + agg.others))*100).toFixed(1)}%)`],
+      ['Transferencia', `${money(agg.transfer)} (${((agg.transfer/Math.max(1,totalCash + totalQr + agg.transfer + agg.others))*100).toFixed(1)}%)`],
+      ['QR', `${money(totalQr)} (${((totalQr/Math.max(1,totalCash + totalQr + agg.transfer + agg.others))*100).toFixed(1)}%)`],
+      ['Otros', `${money(agg.others)} (${((agg.others/Math.max(1,totalCash + totalQr + agg.transfer + agg.others))*100).toFixed(1)}%)`]
     ];
     doc.autoTable({ startY: py, head: [['Método', 'Monto']], body: mpay, theme: 'grid' });
     const movementRows = (closing.outflowsSnapshot || []).map((m) => [
@@ -1817,6 +2685,18 @@ async function downloadClosingPdf(closingId) {
     doc.autoTable({ startY: doc.lastAutoTable.finalY + 4, head: [['DETALLE DE ENTRADAS', '', '', '', '', '']], body: entriesRows.length ? entriesRows : [['Sin entradas.', '', '', '', '', '']], theme: 'grid' });
     doc.autoTable({ startY: doc.lastAutoTable.finalY + 3, head: [['DETALLE DE SALIDAS', '', '', '', '', '']], body: exitsRows.length ? exitsRows : [['Sin salidas.', '', '', '', '', '']], theme: 'grid' });
     doc.autoTable({ startY: doc.lastAutoTable.finalY + 3, head: [['VENTAS POR USUARIO', '', '']], body: userSalesRows.length ? userSalesRows : [['Sin ventas por usuario.', '', '']], theme: 'grid' });
+    const debtPaymentRows = debtPayments.map((pay) => {
+      const sale = saleRecordForPayment(pay);
+      const person = state.people.find((x) => x.id === pay.debtorId);
+      return [
+        new Date(pay.paidAt || closing.closedAt).toLocaleString(),
+        personFullName(person) || '-',
+        sale?.items?.map((item) => `${item.name} x${item.qty}`).join(', ') || '-',
+        pay.method || '-',
+        money(pay.amount || 0),
+        pay.paidBy || '-'
+      ];
+    });
     const historyRows = closingSalesHistoryRows(closing).map((sale) => [
       new Date(sale.createdAt || sale.deletedAt).toLocaleString(),
       `#${orderNumberLabel(sale.orderNumber)}`,
@@ -1826,7 +2706,10 @@ async function downloadClosingPdf(closingId) {
       sale.statusLabel || sale.status || 'OK'
     ]);
     doc.addPage();
-    doc.autoTable({ startY: 12, head: [['HISTORIAL DE VENTAS DE CIERRE', '', '', '', '', '']], body: historyRows.length ? historyRows : [['Sin historial de ventas.', '', '', '', '', '']], theme: 'grid', didParseCell: (hook) => {
+    const writeOffRows = (closing.stockWriteOffsSnapshot || []).map((row) => [row.productName || '-', String(Number(row.qty || 0)), row.reason || '-', row.user || '-', new Date(row.createdAt || closing.closedAt).toLocaleString()]);
+    doc.autoTable({ startY: 12, head: [['PRODUCTOS DADOS DE BAJA', '', '', '', '']], body: writeOffRows.length ? writeOffRows : [['Sin productos dados de baja.', '', '', '', '']], theme: 'grid' });
+    doc.autoTable({ startY: doc.lastAutoTable.finalY + 4, head: [['PAGOS DE DEUDA', '', '', '', '', '']], body: debtPaymentRows.length ? debtPaymentRows : [['Sin pagos de deuda.', '', '', '', '', '']], theme: 'grid' });
+    doc.autoTable({ startY: doc.lastAutoTable.finalY + 4, head: [['HISTORIAL DE VENTAS DE CIERRE', '', '', '', '', '']], body: historyRows.length ? historyRows : [['Sin historial de ventas.', '', '', '', '', '']], theme: 'grid', didParseCell: (hook) => {
       if (hook.section !== 'body') return;
       const cellText = String(hook.row?.raw?.[5] || '');
       if (cellText.includes('ANULADA')) {
@@ -1853,6 +2736,63 @@ function ensureClosingsStatsUI() {
 
 function activeClosingsList() {
   return (state.cashClosings || []).slice().sort((a,b)=>new Date(b.closedAt)-new Date(a.closedAt));
+}
+
+function resetCashClosingsSearch({ render = true } = {}) {
+  state.cashClosings = [];
+  state.cashClosingsLoaded = false;
+  state.cashClosingsSearchMonth = '';
+  if (cashClosingsTable) cashClosingsTable.innerHTML = '<tr><td colspan="14">Selecciona un mes y presiona Buscar.</td></tr>';
+  if (render) renderCashClosings();
+}
+
+async function saveCashClosingToCloud(closing) {
+  if (!closing?.id || !state.settings?.firebaseDbUrl) return;
+  await ensureCloudSeedData();
+  const token = normalizedFirebaseToken();
+  const authModes = token ? [true, false] : [false];
+  const stamp = Date.now();
+  for (const includeToken of authModes) {
+    try {
+      await cloudWritePath(`history/cashClosings/${encodeURIComponent(String(closing.id))}`, closing, { includeToken, method: 'PUT' });
+      await cloudWritePath('history/updatedAt', stamp, { includeToken, method: 'PUT' });
+      return;
+    } catch (err) {
+      if (includeToken && [401, 403].includes(Number(err?.status || 0))) continue;
+      throw err;
+    }
+  }
+}
+
+async function searchCashClosingsByMonth(month) {
+  if (!month || !state.settings?.firebaseDbUrl) {
+    state.cashClosings = [];
+    state.cashClosingsLoaded = true;
+    state.cashClosingsSearchMonth = month || '';
+    renderCashClosings();
+    return [];
+  }
+  await ensureCloudSeedData();
+  const token = normalizedFirebaseToken();
+  const authModes = token ? [true, false] : [false];
+  let rawClosings = {};
+  for (const includeToken of authModes) {
+    try {
+      rawClosings = await cloudReadPath('history/cashClosings', { includeToken }) || {};
+      break;
+    } catch (err) {
+      if (includeToken && [401, 403].includes(Number(err?.status || 0))) continue;
+      throw err;
+    }
+  }
+  const list = normalizeCollectionToArray(rawClosings)
+    .filter((closing) => String(closing?.closedAt || '').slice(0, 7) === month)
+    .sort((a, b) => new Date(b.closedAt || 0) - new Date(a.closedAt || 0));
+  state.cashClosings = list;
+  state.cashClosingsLoaded = true;
+  state.cashClosingsSearchMonth = month;
+  renderCashClosings();
+  return list;
 }
 
 function openSelectClosingsModal() {
@@ -1923,24 +2863,36 @@ function buildStatsFromSelectedClosings() {
     salesCount: 0,
     totalIncome: 0,
     cash: 0,
-    transfer: 0,
     qr: 0,
-    others: 0,
+    debtPending: 0,
+    cost: 0,
+    profit: 0,
     expenses: 0,
     productsTotalQty: 0,
     productsMap: new Map(),
-    usersMap: new Map()
+    usersMap: new Map(),
+    pendingDebtorsMap: new Map(),
+    byClosing: []
   };
   selected.forEach((c) => {
     const agg = getClosingAggregates(c);
     stats.salesCount += Number(c.salesCount || agg.sales.length || 0);
     stats.totalIncome += agg.net;
     stats.cash += agg.cash;
-    stats.transfer += agg.transfer;
     stats.qr += agg.qr;
-    stats.others += agg.others;
+    stats.cost += Number(agg.totalCost || 0);
+    stats.profit += Number(agg.totalProfit || 0);
     stats.expenses += agg.outTotal;
     stats.productsTotalQty += agg.qtyTotal;
+    stats.debtPending += Number(c.debtPending || 0);
+    (c.salesSnapshot || []).forEach((sale) => {
+      if (isSaleAnnulled(sale)) return;
+      if (!sale?.debtorId || Number(sale.debtAmount || 0) <= 0) return;
+      const person = state.people.find((p) => p.id === sale.debtorId);
+      const key = sale.debtorId;
+      if (!stats.pendingDebtorsMap.has(key)) stats.pendingDebtorsMap.set(key, { name: personFullName(person) || 'Persona', pending: 0 });
+      stats.pendingDebtorsMap.get(key).pending += Number(sale.debtAmount || 0);
+    });
     agg.products.forEach((p) => {
       if (!stats.productsMap.has(p.name)) stats.productsMap.set(p.name, { qty: 0, total: 0 });
       const row = stats.productsMap.get(p.name);
@@ -1952,28 +2904,35 @@ function buildStatsFromSelectedClosings() {
     const ur = stats.usersMap.get(user);
     ur.closings += 1;
     ur.total += agg.net;
+    stats.byClosing.push({
+      closingId: c.id,
+      closedAt: c.closedAt || c.fecha_cierre || '',
+      salesCount: Number(c.salesCount || agg.sales.length || 0),
+      qtyTotal: Number(agg.qtyTotal || 0),
+      income: Number(agg.net || 0),
+      profit: Number(agg.totalProfit || 0)
+    });
   });
   stats.avgTicket = stats.salesCount ? stats.totalIncome / stats.salesCount : 0;
   stats.products = [...stats.productsMap.entries()].map(([name,row])=>({name,...row}));
   stats.productsTopQty = stats.products.slice().sort((a,b)=>b.qty-a.qty)[0] || null;
   stats.productsTopAmount = stats.products.slice().sort((a,b)=>b.total-a.total)[0] || null;
-  stats.top5 = stats.products.slice().sort((a,b)=>b.qty-a.qty).slice(0,5);
+  stats.productsAll = stats.products.slice().sort((a, b) => b.qty - a.qty || b.total - a.total || String(a.name).localeCompare(String(b.name), 'es'));
   stats.users = [...stats.usersMap.entries()].map(([user,row])=>({user,...row}));
+  stats.pendingDebtors = [...stats.pendingDebtorsMap.values()].sort((a, b) => b.pending - a.pending);
   const payTotal = Math.max(1, stats.totalIncome);
   stats.paymentPct = {
     cash: (stats.cash / payTotal) * 100,
-    transfer: (stats.transfer / payTotal) * 100,
-    qr: (stats.qr / payTotal) * 100,
-    others: (stats.others / payTotal) * 100
+    qr: (stats.qr / payTotal) * 100
   };
-  stats.mostUsedMethod = Object.entries({Efectivo:stats.cash,Transferencia:stats.transfer,QR:stats.qr,Otros:stats.others}).sort((a,b)=>b[1]-a[1])[0]?.[0] || '-';
+  stats.mostUsedMethod = Object.entries({ Efectivo: stats.cash, QR: stats.qr }).sort((a,b)=>b[1]-a[1])[0]?.[0] || '-';
   return stats;
 }
 
 function renderClosingsStatsOutput(stats) {
   const out = document.getElementById('closingsStatsOutput');
   if (!out) return;
-  out.innerHTML = `<div class="card"><h4>Resumen general</h4><p>Total ventas: ${stats.salesCount}</p><p>Total ingresos: ${money(stats.totalIncome)}</p><p>Total efectivo: ${money(stats.cash)}</p><p>Total transferencias: ${money(stats.transfer)}</p><p>Total QR: ${money(stats.qr)}</p><p>Total gastos: ${money(stats.expenses)}</p><p>Ticket promedio global: ${money(stats.avgTicket)}</p><p>Total productos vendidos: ${stats.productsTotalQty}</p><p>Cierres seleccionados: ${stats.count}</p></div><div class="card"><h4>Productos</h4><p>Producto más vendido: ${stats.productsTopQty ? `${stats.productsTopQty.name} (${stats.productsTopQty.qty})` : '-'}</p><p>Producto que más dinero generó: ${stats.productsTopAmount ? `${stats.productsTopAmount.name} (${money(stats.productsTopAmount.total)})` : '-'}</p><p>Total productos distintos vendidos: ${stats.products.length}</p><table><thead><tr><th>Top 5 productos</th><th>Cantidad</th><th>Total</th></tr></thead><tbody>${stats.top5.map((p)=>`<tr><td>${p.name}</td><td>${p.qty}</td><td>${money(p.total)}</td></tr>`).join('') || '<tr><td colspan="3">Sin datos</td></tr>'}</tbody></table></div><div class="card"><h4>Métodos de pago</h4><p>Efectivo: ${money(stats.cash)} (${stats.paymentPct.cash.toFixed(1)}%)</p><p>Transferencia: ${money(stats.transfer)} (${stats.paymentPct.transfer.toFixed(1)}%)</p><p>QR: ${money(stats.qr)} (${stats.paymentPct.qr.toFixed(1)}%)</p><p>Otros: ${money(stats.others)} (${stats.paymentPct.others.toFixed(1)}%)</p><p>Método más utilizado: ${stats.mostUsedMethod}</p></div><div class="card"><h4>Usuarios</h4><table><thead><tr><th>Usuario</th><th>Cierres</th><th>Total generado</th></tr></thead><tbody>${stats.users.map((u)=>`<tr><td>${u.user}</td><td>${u.closings}</td><td>${money(u.total)}</td></tr>`).join('') || '<tr><td colspan="3">Sin datos</td></tr>'}</tbody></table></div><div class="card"><h4>Estadísticas gráficas comparativas</h4><canvas id="closingsIncomeChart" width="760" height="220"></canvas><canvas id="closingsProductsChart" width="760" height="220"></canvas></div>`;
+  out.innerHTML = `<div class="card"><h4>Resumen general</h4><p>Total ventas: ${stats.salesCount}</p><p>Total ingresos: ${money(stats.totalIncome)}</p><p>Total costo: ${money(stats.cost)}</p><p>Total ganancia: ${money(stats.profit)}</p><p>Total efectivo: ${money(stats.cash)}</p><p>Total QR: ${money(stats.qr)}</p><p>Total deuda pendiente: ${money(stats.debtPending)}</p><p>Total gastos: ${money(stats.expenses)}</p><p>Ticket promedio global: ${money(stats.avgTicket)}</p><p>Total productos vendidos: ${stats.productsTotalQty}</p><p>Total productos distintos vendidos: ${stats.products.length}</p><p>Cierres seleccionados: ${stats.count}</p></div><div class="card"><h4>Productos vendidos (todos)</h4><p>Producto más vendido: ${stats.productsTopQty ? `${stats.productsTopQty.name} (${stats.productsTopQty.qty})` : '-'}</p><p>Producto que más dinero generó: ${stats.productsTopAmount ? `${stats.productsTopAmount.name} (${money(stats.productsTopAmount.total)})` : '-'}</p><table><thead><tr><th>Producto</th><th>Cantidad</th><th>Total</th></tr></thead><tbody>${(stats.productsAll || []).map((p)=>`<tr><td>${p.name}</td><td>${p.qty}</td><td>${money(p.total)}</td></tr>`).join('') || '<tr><td colspan="3">Sin datos</td></tr>'}</tbody></table></div><div class="card"><h4>Métodos de pago</h4><p>Efectivo: ${money(stats.cash)} (${stats.paymentPct.cash.toFixed(1)}%)</p><p>QR: ${money(stats.qr)} (${stats.paymentPct.qr.toFixed(1)}%)</p><p>Método más utilizado: ${stats.mostUsedMethod}</p></div><div class="card"><h4>Ingresos y ganancias por cierre</h4><table><thead><tr><th>Cierre</th><th>Fecha</th><th>Ventas</th><th>Ganancia</th><th>Cant. ventas</th><th>Cant. productos</th></tr></thead><tbody>${(stats.byClosing || []).sort((a, b) => new Date(a.closedAt || 0) - new Date(b.closedAt || 0)).map((row, idx) => `<tr><td>C${idx + 1}</td><td>${new Date(row.closedAt || Date.now()).toLocaleString()}</td><td>${money(row.income)}</td><td>${money(row.profit)}</td><td>${row.salesCount}</td><td>${row.qtyTotal}</td></tr>`).join('') || '<tr><td colspan="6">Sin datos.</td></tr>'}</tbody></table></div><div class="card"><h4>Personas con deuda pendiente</h4><table><thead><tr><th>Persona</th><th>Pendiente</th></tr></thead><tbody>${stats.pendingDebtors.map((d)=>`<tr><td>${d.name}</td><td>${money(d.pending)}</td></tr>`).join('') || '<tr><td colspan="2">Sin deudas pendientes.</td></tr>'}</tbody></table></div><div class="card"><h4>Usuarios</h4><table><thead><tr><th>Usuario</th><th>Cierres</th><th>Total generado</th></tr></thead><tbody>${stats.users.map((u)=>`<tr><td>${u.user}</td><td>${u.closings}</td><td>${money(u.total)}</td></tr>`).join('') || '<tr><td colspan="3">Sin datos</td></tr>'}</tbody></table></div><div class="card"><h4>Estadísticas gráficas comparativas</h4><canvas id="closingsIncomeChart" width="760" height="220"></canvas><canvas id="closingsProductsChart" width="760" height="220"></canvas></div>`;
   const drawBars = (canvasId, labels, values, color='#1f7a5c') => {
     const cv = document.getElementById(canvasId);
     if (!cv || !cv.getContext) return;
@@ -1997,7 +2956,7 @@ function renderClosingsStatsOutput(stats) {
   };
   const closings = (stats.selected || []).slice().sort((a, b) => new Date(a.closedAt) - new Date(b.closedAt));
   drawBars('closingsIncomeChart', closings.map((c, i) => `C${i + 1}`), closings.map((c) => Number(c.cashIn || 0) + Number(c.qrIn || 0)), '#1570ef');
-  drawBars('closingsProductsChart', (stats.top5 || []).map((p) => p.name), (stats.top5 || []).map((p) => Number(p.qty || 0)), '#1f7a5c');
+  drawBars('closingsProductsChart', (stats.productsAll || []).slice(0, 20).map((p) => p.name), (stats.productsAll || []).slice(0, 20).map((p) => Number(p.qty || 0)), '#1f7a5c');
 }
 
 async function downloadClosingsStatsPdf() {
@@ -2016,16 +2975,29 @@ async function downloadClosingsStatsPdf() {
     doc.setFontSize(10);
     doc.text(`Cantidad de cierres seleccionados: ${st.count}`, 14, 34);
     doc.autoTable({ startY: 38, head: [['Resumen general', 'Valor']], body: [
-      ['Total ventas', String(st.salesCount)], ['Total ingresos', money(st.totalIncome)], ['Total efectivo', money(st.cash)], ['Total QR', money(st.qr)], ['Total gastos', money(st.expenses)], ['Ticket promedio global', money(st.avgTicket)], ['Total productos vendidos', String(st.productsTotalQty)]
+      ['Total ventas', String(st.salesCount)], ['Total ingresos', money(st.totalIncome)], ['Total costo', money(st.cost || 0)], ['Total ganancia', money(st.profit || 0)], ['Total efectivo', money(st.cash)], ['Total QR', money(st.qr)], ['Total deuda pendiente', money(st.debtPending || 0)], ['Total gastos', money(st.expenses)], ['Ticket promedio global', money(st.avgTicket)], ['Total productos vendidos', String(st.productsTotalQty)], ['Productos distintos vendidos', String(st.products?.length || 0)]
     ] });
-    doc.autoTable({ startY: doc.lastAutoTable.finalY + 4, head: [['Producto', 'Cantidad', 'Total']], body: st.top5.map((p)=>[p.name,String(p.qty),money(p.total)]) });
+    doc.autoTable({ startY: doc.lastAutoTable.finalY + 4, head: [['Producto', 'Cantidad', 'Total']], body: (st.productsAll || []).map((p)=>[p.name,String(p.qty),money(p.total)]) });
     doc.autoTable({ startY: doc.lastAutoTable.finalY + 4, head: [['Método de pago', 'Monto']], body: [
       ['Efectivo', `${money(st.cash)} (${st.paymentPct.cash.toFixed(1)}%)`],
-      ['QR', `${money(st.qr)} (${st.paymentPct.qr.toFixed(1)}%)`],
-      ['Otros', `${money(st.others)} (${st.paymentPct.others.toFixed(1)}%)`]
+      ['QR', `${money(st.qr)} (${st.paymentPct.qr.toFixed(1)}%)`]
     ]});
+    doc.autoTable({ startY: doc.lastAutoTable.finalY + 4, head: [['Cierre', 'Fecha', 'Ventas', 'Ganancia', 'Cant. ventas', 'Cant. productos']], body: (st.byClosing || []).map((row, idx) => [`C${idx + 1}`, new Date(row.closedAt || Date.now()).toLocaleString(), money(row.income), money(row.profit), String(row.salesCount), String(row.qtyTotal)]) });
     doc.addPage();
     doc.autoTable({ startY: 12, head: [['Usuario', 'Cierres', 'Total generado']], body: st.users.map((u)=>[u.user,String(u.closings),money(u.total)]) });
+    doc.autoTable({ startY: doc.lastAutoTable.finalY + 4, head: [['Persona deudora', 'Pendiente']], body: (st.pendingDebtors || []).map((d) => [d.name, money(d.pending)]) });
+    const incomeCanvas = document.getElementById('closingsIncomeChart');
+    const productsCanvas = document.getElementById('closingsProductsChart');
+    if (incomeCanvas?.toDataURL) {
+      doc.addPage();
+      doc.setFontSize(12);
+      doc.text('Gráfica comparativa de ingresos por cierre', 14, 12);
+      doc.addImage(incomeCanvas.toDataURL('image/png'), 'PNG', 14, 16, 180, 60);
+      if (productsCanvas?.toDataURL) {
+        doc.text('Gráfica comparativa de productos vendidos', 14, 86);
+        doc.addImage(productsCanvas.toDataURL('image/png'), 'PNG', 14, 90, 180, 60);
+      }
+    }
     doc.save('estadisticas_cierres_seleccionados.pdf');
   } catch (error) {
     console.error('[pdf] stats', error);
@@ -2035,8 +3007,11 @@ async function downloadClosingsStatsPdf() {
 function renderCashClosings() {
   if (!cashClosingsTable) return;
   ensureClosingsStatsUI();
-  const month = closingsMonthFilter?.value || '';
-  const list = month ? state.cashClosings.filter((c) => c.closedAt?.slice(0, 7) === month) : state.cashClosings;
+  if (!state.cashClosingsLoaded) {
+    cashClosingsTable.innerHTML = '<tr><td colspan="14">Selecciona un mes y presiona Buscar.</td></tr>';
+    return;
+  }
+  const list = state.cashClosings || [];
   cashClosingsTable.innerHTML = '';
   if (!list.length) {
     cashClosingsTable.innerHTML = '<tr><td colspan="14">No hay cierres para el filtro seleccionado.</td></tr>';
@@ -2047,10 +3022,12 @@ function renderCashClosings() {
     const inCash = (c.outflowsSnapshot || []).filter((m) => m.direction === 'entrada' && m.method === 'efectivo').reduce((a,m)=>a+Number(m.amount||0),0);
     const outQr = (c.outflowsSnapshot || []).filter((m) => m.direction === 'salida' && m.method === 'qr').reduce((a,m)=>a+Number(m.amount||0),0);
     const inQr = (c.outflowsSnapshot || []).filter((m) => m.direction === 'entrada' && m.method === 'qr').reduce((a,m)=>a+Number(m.amount||0),0);
-    const finalCash = Number(c.openingCash || 0) + Number(c.cashIn || 0) - outCash + inCash;
-    const finalQr = Number(c.qrIn || 0) - outQr + inQr;
+    const debtCashIn = Number(c.debtCashIn || 0);
+    const debtQrIn = Number(c.debtQrIn || 0);
+    const finalCash = Number(c.openingCash || 0) + Number(c.cashIn || 0) + debtCashIn - outCash + inCash;
+    const finalQr = Number(c.qrIn || 0) + debtQrIn - outQr + inQr;
     const tr = document.createElement('tr');
-    tr.innerHTML = `<td>${new Date(c.closedAt).toLocaleString()}</td><td>${money(c.openingCash)}</td><td>${money(c.cashIn)}</td><td>${money(c.qrIn)}</td><td>${money(c.debtPending || 0)}</td><td>${money(outCash)}</td><td>${money(inCash)}</td><td>${money(outQr)}</td><td>${money(inQr)}</td><td>${money(finalCash)}</td><td>${money(finalQr)}</td><td>${c.salesCount || 0}</td><td><button class="secondary" data-closing-id="${c.id}" type="button">Ver detalle</button> <button class="secondary" data-closing-pdf="${c.id}" type="button">PDF</button></td><td>${hasPermission('deleteClosings') ? `<button class="secondary" data-closing-del="${c.id}" type="button">Eliminar</button>` : '-'}</td>`;
+    tr.innerHTML = `<td>${new Date(c.closedAt).toLocaleString()}</td><td>${money(c.openingCash)}</td><td>${money(Number(c.cashIn || 0) + debtCashIn)}</td><td>${money(Number(c.qrIn || 0) + debtQrIn)}</td><td>${money(c.debtPending || 0)}</td><td>${money(outCash)}</td><td>${money(inCash)}</td><td>${money(outQr)}</td><td>${money(inQr)}</td><td>${money(finalCash)}</td><td>${money(finalQr)}</td><td>${c.salesCount || 0}</td><td><button class="secondary" data-closing-id="${c.id}" type="button">Ver detalle</button> <button class="secondary" data-closing-pdf="${c.id}" type="button">PDF</button></td><td>${hasPermission('deleteClosings') ? `<button class="secondary" data-closing-del="${c.id}" type="button">Eliminar</button>` : '-'}</td>`;
     tr.dataset.closingNumber = String(idx + 1);
     cashClosingsTable.appendChild(tr);
   });
@@ -2082,6 +3059,7 @@ function renderClosingDetails(closingId) {
   const debtPayments = Array.isArray(closing.debtPaymentsSnapshot) ? closing.debtPaymentsSnapshot.filter((p) => !p?.anulado) : [];
   const debtCash = debtPayments.reduce((a, p) => a + Number(p.cashAmount || (p.method === 'efectivo' ? p.amount : 0) || 0), 0);
   const debtQr = debtPayments.reduce((a, p) => a + Number(p.qrAmount || (p.method === 'qr' ? p.amount : 0) || 0), 0);
+  const debtCollected = debtCash + debtQr;
   const totalCash = Number(closing.cashIn || 0) + debtCash;
   const totalQr = Number(closing.qrIn || 0) + debtQr;
   const openingCash = Number(closing.openingCash || 0);
@@ -2095,11 +3073,28 @@ function renderClosingDetails(closingId) {
   const closingHistoryRows = closingHistory.length
     ? closingHistory.map((sale) => `<tr style="${sale.status === 'ANULADA' ? 'color:#c1121f;font-weight:700;' : ''}"><td>${new Date(sale.createdAt || sale.deletedAt).toLocaleString()}</td><td>#${orderNumberLabel(sale.orderNumber)}</td><td>${sale.payment || '-'}</td><td>${money(sale.total)}</td><td>${sale.user || '-'}</td><td>${sale.statusLabel || sale.status}</td></tr>`).join('')
     : '<tr><td colspan="6">Sin historial de ventas.</td></tr>';
-  if (closingSummaryText) closingSummaryText.innerHTML = `<div class="card"><h4>SECCIÓN 1 – INFORMACIÓN GENERAL</h4><p>Número de cierre: ${String(closing.id || '-').slice(-8)}</p><p>Fecha de apertura: ${openAt.toLocaleDateString()}</p><p>Hora de apertura: ${openAt.toLocaleTimeString()}</p><p>Fecha de cierre: ${closeAt.toLocaleDateString()}</p><p>Hora de cierre: ${closeAt.toLocaleTimeString()}</p><p>Usuario que abrió: ${closing.usuario_apertura || '-'}</p><p>Usuario que cerró: ${closing.usuario_cierre || '-'}</p><p>Tiempo total de caja abierta: ${formatDurationMs(closeAt - openAt)}</p></div><div class="card"><h4>Detalle para enviar</h4><p>Cambio inicial: ${money(openingCash)}</p><p>Valor efectivo de ventas: ${money(totalCash)}</p><p>Valor QR de ventas: ${money(totalQr)}</p><p>Salida efectivo: ${money(outCash)}</p><p>Entrada efectivo: ${money(inCash)}</p><p>Salida QR: ${money(outQr)}</p><p>Entrada QR: ${money(inQr)}</p><p>Valor final en caja: ${money(totalInBox)}</p><p>Valor final descontando cambio inicial: ${money(realDelivered)}</p></div><div class="card"><h4>SECCIÓN 2 – RESUMEN FINANCIERO</h4><p>Inicio de caja: ${money(openingCash)}</p><p>Total ventas brutas: ${money(grossSales)}</p><p>Total descuentos: ${money(totalDiscounts)}</p><p>Total ingresos netos: ${money(grossSales - totalDiscounts)}</p><p>Total en efectivo: ${money(totalCash)}</p><p>Total QR: ${money(totalQr)}</p><p>Total salidas externas efectivo: ${money(outCash)}</p><p>Total salidas externas QR: ${money(outQr)}</p><p>Total entradas externas efectivo: ${money(inCash)}</p><p>Total entradas externas QR: ${money(inQr)}</p><p>Total efectivo final: ${money(totalCashFinal)}</p><p>Total QR final: ${money(totalQrFinal)}</p><p>Valor total en caja (incluye valor de caja): ${money(totalInBox)}</p><p>Valor efectivo real de venta entregado: ${money(realDelivered)}</p></div><div class="card"><h4>Productos vendidos</h4><table><thead><tr><th>Producto</th><th>Cantidad</th><th>Total</th></tr></thead><tbody>${agg.products.length ? agg.products.map((row) => `<tr><td>${row.name}</td><td>${row.qty}</td><td>${money(row.total)}</td></tr>`).join('') : '<tr><td colspan="3">Sin productos vendidos.</td></tr>'}</tbody></table></div><div class="card"><h4>HISTORIAL DE VENTAS DE CIERRE</h4><table><thead><tr><th>Fecha</th><th>Nro pedido</th><th>Método</th><th>Total</th><th>Usuario</th><th>Estado</th></tr></thead><tbody>${closingHistoryRows}</tbody></table></div><div class="card"><h4>SECCIÓN 3 – MÉTRICAS OPERATIVAS</h4><p>Cantidad total de ventas: ${closing.salesCount || sales.length}</p><p>Total productos vendidos: ${agg.qtyTotal}</p><p>Ticket promedio: ${money(agg.avgTicket)}</p><p>Venta más alta: ${money(agg.saleMax)}</p><p>Venta más baja: ${money(agg.saleMin)}</p><p>Ventas eliminadas: ${deletedCount} · Mov. caja: ${outflowCount} · Pagos deuda: ${debtPaymentsCount}</p></div><div class="card"><h4>Detalle de entradas</h4><table><thead><tr><th>Fecha</th><th>Descripción</th><th>Método</th><th>Monto</th><th>Usuario</th></tr></thead><tbody>${entries.map((m) => `<tr><td>${new Date(m.createdAt).toLocaleString()}</td><td>${m.description || '-'}</td><td>${m.method || '-'}</td><td>${money(m.amount || 0)}</td><td>${m.user || '-'}</td></tr>`).join('') || '<tr><td colspan="5">Sin entradas.</td></tr>'}</tbody></table></div><div class="card"><h4>Detalle de salidas</h4><table><thead><tr><th>Fecha</th><th>Descripción</th><th>Método</th><th>Monto</th><th>Usuario</th></tr></thead><tbody>${exits.map((m) => `<tr><td>${new Date(m.createdAt).toLocaleString()}</td><td>${m.description || '-'}</td><td>${m.method || '-'}</td><td>${money(m.amount || 0)}</td><td>${m.user || '-'}</td></tr>`).join('') || '<tr><td colspan="5">Sin salidas.</td></tr>'}</tbody></table></div>`;
+  const historyRowsDetailed = closingHistory.length
+    ? closingHistory.map((sale) => {
+      const cashPart = Number(sale.breakdown?.cash || 0);
+      const qrPart = Number(sale.breakdown?.qr || 0);
+      const debtPart = Math.max(0, Number(sale.debtAmount || 0));
+      return `<tr style="${sale.status === 'ANULADA' ? 'color:#c1121f;font-weight:700;' : ''}"><td>${new Date(sale.createdAt || sale.deletedAt).toLocaleString()}</td><td>#${orderNumberLabel(sale.orderNumber)}</td><td>${sale.payment || '-'}</td><td>${money(cashPart)}</td><td>${money(qrPart)}</td><td>${money(debtPart)}</td><td>${money(sale.total)}</td><td>${sale.user || '-'}</td><td>${sale.statusLabel || sale.status}</td></tr>`;
+    }).join('')
+    : '<tr><td colspan="9">Sin historial de ventas.</td></tr>';
+  const totalsHistory = closingHistory.filter((sale) => sale.status !== 'ANULADA').reduce((acc, sale) => {
+    acc.cash += Number(sale.breakdown?.cash || 0);
+    acc.qr += Number(sale.breakdown?.qr || 0);
+    acc.debt += Math.max(0, Number(sale.debtAmount || 0));
+    return acc;
+  }, { cash: 0, qr: 0, debt: 0 });
+  const closingWriteOffs = Array.isArray(closing.stockWriteOffsSnapshot) ? closing.stockWriteOffsSnapshot : [];
+  const openingUser = closing.usuario_apertura || state.cashBoxes.find((box) => box.id === closing.cashBoxId)?.usuario_apertura || '-';
+  const closingUser = closing.usuario_cierre || state.cashBoxes.find((box) => box.id === closing.cashBoxId)?.usuario_cierre || '-';
+  if (closingSummaryText) closingSummaryText.innerHTML = `<div class="card"><h4>SECCIÓN 1 – INFORMACIÓN GENERAL</h4><p>Número de cierre: ${String(closing.id || '-').slice(-8)}</p><p>Fecha de apertura: ${openAt.toLocaleDateString()}</p><p>Hora de apertura: ${openAt.toLocaleTimeString()}</p><p>Fecha de cierre: ${closeAt.toLocaleDateString()}</p><p>Hora de cierre: ${closeAt.toLocaleTimeString()}</p><p>Usuario que abrió: ${openingUser}</p><p>Usuario que cerró: ${closingUser}</p><p>Tiempo total de caja abierta: ${formatDurationMs(closeAt - openAt)}</p></div><div class="card"><h4>SECCIÓN 2 – RESUMEN FINANCIERO</h4><p>Inicio de caja: ${money(openingCash)}</p><p>Total ventas brutas: ${money(grossSales)}</p><p>Pagos de deuda cobrados: ${money(debtCollected)}</p><p>Total descuentos: ${money(totalDiscounts)}</p><p>Total ingresos netos: ${money((grossSales - totalDiscounts) + debtCollected)}</p><p>Total en efectivo: ${money(totalCash)}</p><p>Total QR: ${money(totalQr)}</p><p>Total salidas externas efectivo: ${money(outCash)}</p><p>Total salidas externas QR: ${money(outQr)}</p><p>Total entradas externas efectivo: ${money(inCash)}</p><p>Total entradas externas QR: ${money(inQr)}</p><p>Total efectivo final: ${money(totalCashFinal)}</p><p>Total QR final: ${money(totalQrFinal)}</p><p>Valor total en caja (incluye valor de caja): ${money(totalInBox)}</p><p>Valor efectivo real de venta entregado: ${money(realDelivered)}</p></div><div class="card"><h4>HISTORIAL DE VENTAS DE CIERRE</h4><table><thead><tr><th>Fecha</th><th>Nro pedido</th><th>Método</th><th>Efectivo</th><th>QR</th><th>Deuda</th><th>Total</th><th>Usuario</th><th>Estado</th></tr></thead><tbody>${historyRowsDetailed}</tbody><tfoot><tr><th colspan="3">Totales (sin anuladas)</th><th>${money(totalsHistory.cash)}</th><th>${money(totalsHistory.qr)}</th><th>${money(totalsHistory.debt)}</th><th colspan="3"></th></tr></tfoot></table></div><div class="card"><h4>Productos vendidos (costos y ganancias)</h4><table><thead><tr><th>Producto</th><th>Cantidad</th><th>Costo</th><th>Ganancia</th><th>Total</th></tr></thead><tbody>${agg.products.length ? agg.products.map((row) => `<tr><td>${row.name}</td><td>${row.qty}</td><td>${money(row.cost || 0)}</td><td>${money(row.profit || 0)}</td><td>${money(row.total)}</td></tr>`).join('') : '<tr><td colspan="5">Sin productos vendidos.</td></tr>'}</tbody><tfoot><tr><th colspan="2">Totales</th><th>${money(agg.totalCost || 0)}</th><th>${money(agg.totalProfit || 0)}</th><th>${money(agg.totalRevenue || 0)}</th></tr></tfoot></table></div><div class="card"><h4>SECCIÓN 3 – MÉTRICAS OPERATIVAS</h4><p>Cantidad total de ventas: ${closing.salesCount || sales.length}</p><p>Total productos vendidos: ${agg.qtyTotal}</p><p>Ticket promedio: ${money(agg.avgTicket)}</p><p>Venta más alta: ${money(agg.saleMax)}</p><p>Venta más baja: ${money(agg.saleMin)}</p><p>Ventas eliminadas: ${deletedCount} · Mov. caja: ${outflowCount} · Pagos deuda: ${debtPaymentsCount}</p></div><div class="card"><h4>Productos dados de baja</h4><table><thead><tr><th>Producto</th><th>Cantidad</th><th>Motivo</th><th>Usuario</th><th>Fecha</th></tr></thead><tbody>${closingWriteOffs.length ? closingWriteOffs.map((row) => `<tr><td>${escapeHtml(row.productName || '-')}</td><td>${Number(row.qty || 0)}</td><td>${escapeHtml(row.reason || '-')}</td><td>${escapeHtml(row.user || '-')}</td><td>${new Date(row.createdAt || closing.closedAt).toLocaleString()}</td></tr>`).join('') : '<tr><td colspan="5">Sin productos dados de baja.</td></tr>'}</tbody></table></div><div class="card"><h4>Pagos de deuda</h4><table><thead><tr><th>Fecha pago</th><th>Persona</th><th>Detalle compra</th><th>Método</th><th>Monto</th><th>Usuario</th></tr></thead><tbody>${debtPayments.map((p) => { const sale = saleRecordForPayment(p); const person = state.people.find((x) => x.id === p.debtorId); return `<tr><td>${new Date(p.paidAt).toLocaleString()}</td><td>${personFullName(person) || '-'}</td><td>${debtPaymentDetailText(p, sale)}</td><td>${p.method || '-'}</td><td>${money(p.amount || 0)}</td><td>${p.paidBy || '-'}</td></tr>`; }).join('') || '<tr><td colspan="6">Sin pagos de deuda.</td></tr>'}</tbody></table></div><div class="card"><h4>Detalle de entradas</h4><table><thead><tr><th>Fecha</th><th>Descripción</th><th>Método</th><th>Monto</th><th>Usuario</th></tr></thead><tbody>${entries.map((m) => `<tr><td>${new Date(m.createdAt).toLocaleString()}</td><td>${m.description || '-'}</td><td>${m.method || '-'}</td><td>${money(m.amount || 0)}</td><td>${m.user || '-'}</td></tr>`).join('') || '<tr><td colspan="5">Sin entradas.</td></tr>'}</tbody></table></div><div class="card"><h4>Detalle de salidas</h4><table><thead><tr><th>Fecha</th><th>Descripción</th><th>Método</th><th>Monto</th><th>Usuario</th></tr></thead><tbody>${exits.map((m) => `<tr><td>${new Date(m.createdAt).toLocaleString()}</td><td>${m.description || '-'}</td><td>${m.method || '-'}</td><td>${money(m.amount || 0)}</td><td>${m.user || '-'}</td></tr>`).join('') || '<tr><td colspan="5">Sin salidas.</td></tr>'}</tbody></table></div>`;
   if (closingSalesTable) closingSalesTable.innerHTML = sales.length ? sales.map((sale) => `<tr><td>${new Date(sale.createdAt).toLocaleString()}</td><td>#${orderNumberLabel(sale.orderNumber)}</td><td>${sale.payment}</td><td>${money(sale.total)}</td><td>${sale.user}</td></tr>`).join('') : '<tr><td colspan="5">Sin ventas.</td></tr>';
   if (closingProductsTable) {
     const aggProducts = agg.products;
-    closingProductsTable.innerHTML = aggProducts.length ? aggProducts.map((row) => `<tr><td>${row.name}</td><td>${row.qty}</td><td>${money(row.total)}</td></tr>`).join('') : '<tr><td colspan="3">Sin productos vendidos.</td></tr>';
+    closingProductsTable.innerHTML = aggProducts.length ? aggProducts.map((row) => `<tr><td>${row.name}</td><td>${row.qty}</td><td>${money(row.cost || 0)}</td><td>${money(row.profit || 0)}</td><td>${money(row.total)}</td></tr>`).join('') : '<tr><td colspan="5">Sin productos vendidos.</td></tr>';
   }
   if (closingUsersTable) {
     const usersMap = new Map();
@@ -2202,6 +3197,45 @@ function renderDebtors() {
   let debtPersonTotal = $('debtPersonTotal');
   const debtPersonDetailsTable = $('debtPersonDetailsTable');
   if (!debtPeopleTable || !debtPersonDetailsTable || !debtPersonTitle) return;
+  if (payTotalDebtBtn && !document.getElementById('debtSaveChangesBtn')) {
+    const saveBtn = document.createElement('button');
+    saveBtn.id = 'debtSaveChangesBtn';
+    saveBtn.className = 'secondary';
+    saveBtn.type = 'button';
+    saveBtn.textContent = 'Guardar cambios';
+    saveBtn.style.marginLeft = '0.5rem';
+    payTotalDebtBtn.insertAdjacentElement('afterend', saveBtn);
+    saveBtn.addEventListener('click', async () => {
+      if (!pendingDebtSyncChanges) return;
+      saveBtn.disabled = true;
+      try {
+        await syncToCloud({ modules: ['operations'], reason: 'debt-payment-manual-save' });
+        await pullFromCloud({ force: true, modules: ['operations'], reason: 'debt-payment-manual-verify' });
+        const salesOk = [...pendingDebtSaleIds].every((saleId) => (state.sales || []).some((s) => s.id === saleId));
+        const paymentsOk = [...pendingDebtPaymentIds].every((paymentId) => (state.debtPayments || []).some((p) => p.id === paymentId));
+        if (!salesOk || !paymentsOk) throw new Error('Verificación post-guardado de deudas no consistente.');
+        pendingDebtSyncChanges = false;
+        pendingDebtSaleIds.clear();
+        pendingDebtPaymentIds.clear();
+      } catch (err) {
+        console.error('[debt][manual-save] error', err);
+        pendingDebtSyncChanges = true;
+      } finally {
+        refreshPendingSyncButtons();
+      }
+    });
+  }
+  const renderDebtorDetails = (personId = '') => {
+    const sales = state.sales.filter((s) => s.debtorId === personId && Number(s.debtAmount || 0) > 0 && s.paymentStatus !== 'realizado' && !isSaleAnnulled(s));
+    const person = state.people.find((p) => p.id === personId);
+    const total = sales.reduce((a, s) => a + Number(s.debtAmount || 0), 0);
+    state.activeDebtorId = personId;
+    debtPersonTitle.textContent = `${personFullName(person)} · ${person?.description || '-'} · Tel: ${person?.phone || '-'}`;
+    debtPersonTotal.textContent = `Deuda total: ${money(total)}`;
+    debtPersonDetailsTable.innerHTML = sales.length
+      ? sales.map((s) => `<tr><td>${new Date(s.createdAt).toLocaleString()}</td><td>${s.items.map((i) => `${i.name} x${i.qty}`).join(', ')}</td><td>${money(s.debtAmount)}</td><td>${s.user}</td><td><button class="secondary" data-pay-sale="${s.id}" type="button">Pagar deuda</button></td></tr>`).join('')
+      : '<tr><td colspan="5">Sin deudas pendientes para mostrar.</td></tr>';
+  };
   if (!debtPersonTotal) {
     debtPersonTotal = document.createElement('p');
     debtPersonTotal.id = 'debtPersonTotal';
@@ -2211,7 +3245,8 @@ function renderDebtors() {
     debtPersonTitle.insertAdjacentElement('afterend', debtPersonTotal);
   }
   const grouped = new Map();
-  state.sales.filter((s) => Number(s.debtAmount || 0) > 0 && s.debtorId).forEach((s) => {
+  console.info('[debt][render]', { salesCount: state.sales?.length || 0, debtPaymentsCount: state.debtPayments?.length || 0 });
+  state.sales.filter((s) => Number(s.debtAmount || 0) > 0 && s.debtorId && s.paymentStatus !== 'realizado' && !isSaleAnnulled(s)).forEach((s) => {
     if (!grouped.has(s.debtorId)) grouped.set(s.debtorId, []);
     grouped.get(s.debtorId).push(s);
   });
@@ -2221,18 +3256,19 @@ function renderDebtors() {
     return `<tr><td>${personFullName(person) || 'Persona eliminada'}</td><td>${money(total)}</td><td>${sales.length}</td><td><button class="secondary" data-debtor-id="${personId}" type="button">Ver detalles</button></td></tr>`;
   });
   debtPeopleTable.innerHTML = rows.length ? rows.join('') : '<tr><td colspan="4">Sin deudas pendientes.</td></tr>';
+  if (state.activeDebtorId && !grouped.has(state.activeDebtorId)) {
+    state.activeDebtorId = '';
+    debtPersonTitle.textContent = 'Selecciona una persona para ver sus deudas pendientes';
+    debtPersonDetailsTable.innerHTML = '<tr><td colspan="5">Sin deudas pendientes para mostrar.</td></tr>';
+  }
+  if (state.activeDebtorId && grouped.has(state.activeDebtorId)) renderDebtorDetails(state.activeDebtorId);
   if (debtPersonTotal && !state.activeDebtorId) debtPersonTotal.textContent = 'Deuda total: Bs 0.00';
   debtPeopleTable.onclick = (e) => {
     const btn = e.target.closest('button[data-debtor-id]');
     if (!btn) return;
-    const person = state.people.find((p) => p.id === btn.dataset.debtorId);
-    const sales = state.sales.filter((s) => s.debtorId === btn.dataset.debtorId && Number(s.debtAmount || 0) > 0);
-    const total = sales.reduce((a, s) => a + Number(s.debtAmount || 0), 0);
-    state.activeDebtorId = btn.dataset.debtorId;
-    debtPersonTitle.textContent = `${personFullName(person)} · ${person?.description || '-'} · Tel: ${person?.phone || '-'}`;
-    debtPersonTotal.textContent = `Deuda total: ${money(total)}`;
-    debtPersonDetailsTable.innerHTML = sales.map((s) => `<tr><td>${new Date(s.createdAt).toLocaleString()}</td><td>${s.items.map((i) => `${i.name} x${i.qty}`).join(', ')}</td><td>${money(s.debtAmount)}</td><td>${s.user}</td><td><button class=\"secondary\" data-pay-sale=\"${s.id}\" type=\"button\">Pagar deuda</button></td></tr>`).join('');
+    renderDebtorDetails(btn.dataset.debtorId);
   };
+  refreshPendingSyncButtons();
 }
 
 function renderUsers() {
@@ -2277,9 +3313,20 @@ function renderUsers() {
     userManagerCard.appendChild(wrap);
   }
   const saveUsersBtn = document.getElementById('saveUsersChangesBtn');
-  if (saveUsersBtn) saveUsersBtn.onclick = () => {
-    persist();
-    setMsg(homeMessage, 'Usuarios y permisos guardados correctamente.');
+  if (saveUsersBtn) saveUsersBtn.onclick = async () => {
+    console.info('[users][save] Guardando usuarios manualmente', { usersCount: state.users?.length || 0 });
+    markModulesDirty(['config'], 'users-manual-save-local');
+    persist({ module: 'users' });
+    try {
+      await syncToCloud({ modules: ['config'], reason: 'users-manual-save' });
+      await pullFromCloud({ force: true, modules: ['config'], reason: 'users-manual-save-verify' });
+      const usersOk = (state.users || []).length > 0;
+      if (!usersOk) throw new Error('Verificación de usuarios falló tras guardado.');
+      setMsg(homeMessage, 'Usuarios y permisos guardados correctamente.');
+    } catch (err) {
+      console.error('[users][sync] Error guardando usuarios en cloud', { message: err?.message, code: err?.code, status: err?.status });
+      setMsg(homeMessage, 'No se pudo guardar usuarios en cloud.', false);
+    }
   };
   const exportUsersBtn = document.getElementById('exportUsersBtn');
   if (exportUsersBtn) exportUsersBtn.onclick = exportUsersToExcel;
@@ -2362,12 +3409,27 @@ function importUsersFromExcelFile(file) {
         usersMap.set(key, base);
       });
       state.users = [...usersMap.values()];
+      console.info('[users][import] usuarios cargados desde XLSX', { importedRows: rows.length, usersCount: state.users.length });
       ensureUsers();
-      persist();
+      const importedUsernames = [...usersMap.values()].map((u) => String(u.username || '').trim()).filter(Boolean);
+      markModulesDirty(['config'], 'users-import-local');
+      persist({ module: 'users' });
       renderUsers();
-      alert('Usuarios importados correctamente.');
+      Promise.resolve().then(async () => {
+        try {
+          await syncToCloud({ modules: ['config'], reason: 'users-import' });
+          await pullFromCloud({ force: true, modules: ['config'], reason: 'users-import-verify' });
+          const remoteOk = importedUsernames.every((username) => (state.users || []).some((u) => String(u.username || '').trim().toLowerCase() === username.toLowerCase()));
+          if (!remoteOk) throw new Error('Verificación de usuarios importados falló en remoto.');
+          console.info('[users][sync] usuarios importados sincronizados', { usersCount: state.users.length });
+          alert('Usuarios importados correctamente.');
+        } catch (err) {
+          console.error('[users][sync] fallo sincronizando usuarios importados', { message: err?.message, code: err?.code, status: err?.status });
+          alert('Usuarios importados localmente, pero falló sincronización cloud.');
+        }
+      });
     } catch (error) {
-      console.error('[users] import error', error);
+      console.error('[users][import] import error', error);
       alert('No se pudo importar el archivo de usuarios.');
     }
   };
@@ -2615,8 +3677,8 @@ function renderWarehouse() {
 
 function exportProductsToExcel() {
   if (!window.XLSX) return alert('No se pudo cargar la librería XLSX.');
-  const rows = (state.products || []).map((p) => ({ PRODUCTO: String(p.name || '').trim(), CATEGORIA: String(p.category || 'Todos').trim(), PRECIO: Number(p.price || 0) }));
-  const ws = XLSX.utils.json_to_sheet(rows, { header: ['PRODUCTO', 'CATEGORIA', 'PRECIO'] });
+  const rows = (state.products || []).map((p) => ({ PRODUCTO: String(p.name || '').trim(), CATEGORIA: String(p.category || 'Todos').trim(), COSTO: Number(p.cost || 0), PRECIO: Number(p.price || 0) }));
+  const ws = XLSX.utils.json_to_sheet(rows, { header: ['PRODUCTO', 'CATEGORIA', 'COSTO', 'PRECIO'] });
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, 'PRODUCTOS');
   XLSX.writeFile(wb, 'productos_pos.xlsx');
@@ -2634,7 +3696,8 @@ function importProductsFromExcelFile(file) {
       const rows = XLSX.utils.sheet_to_json(ws, { defval: '' });
       const headers = Object.keys(rows[0] || {});
       const expected = ['PRODUCTO', 'CATEGORIA', 'PRECIO'];
-      const validHeaders = headers.length === expected.length && expected.every((h) => headers.includes(h));
+      const hasRequired = expected.every((h) => headers.includes(h));
+      const validHeaders = rows.length && hasRequired;
       if (!rows.length || !validHeaders) {
         alert('Formato inválido. Debe contener exactamente: PRODUCTO | CATEGORIA | PRECIO');
         return;
@@ -2646,24 +3709,28 @@ function importProductsFromExcelFile(file) {
       rows.forEach((row, idx) => {
         const productName = String(row.PRODUCTO || '').trim();
         const category = String(row.CATEGORIA || 'Todos').trim() || 'Todos';
+        const cost = Math.max(0, Number(row.COSTO || 0));
         const price = Number(row.PRECIO);
         if (!productName) { errors.push(`Fila ${idx + 2}: PRODUCTO vacío`); return; }
         if (Number.isNaN(price)) { errors.push(`Fila ${idx + 2}: PRECIO inválido`); return; }
         const key = normalizeProductName(productName);
         const found = existingMap.get(key);
         if (!found) {
-          state.products.push({ id: uid(), name: productName, category, price, hidden: false });
+          state.products.push({ id: uid(), name: productName, category, cost, price, hidden: false, sortOrder: nextProductSortOrderForCategory(category) });
           existingMap.set(key, state.products[state.products.length - 1]);
           created += 1;
         } else {
           found.name = productName;
           found.category = category;
+          found.cost = cost;
           found.price = price;
+          if (!Number.isFinite(Number(found.sortOrder))) found.sortOrder = nextProductSortOrderForCategory(category);
           updated += 1;
         }
+        restoreDeletedCategory(category);
         if (!state.categories.includes(category)) state.categories.push(category);
       });
-      persist();
+      persist({ includeHistory: true });
       renderProducts();
       renderSaleSelectors();
       alert(`Importación finalizada.\nCreados: ${created}\nActualizados: ${updated}\nErrores: ${errors.length}${errors.length ? `\n\n${errors.join('\n')}` : ''}`);
@@ -2677,13 +3744,17 @@ function importProductsFromExcelFile(file) {
 
 function renderStockView() {
   if (!stockTable || !stockProductSelect) return;
+  const head = stockTable.closest('table')?.querySelector('thead tr');
+  if (head) head.innerHTML = '<th>PRODUCTO</th><th>CATEGORÍA</th><th>STOCK ACTUAL</th><th>STOCK MÍNIMO</th><th>ACTIVADO</th><th>ALERTA</th>';
   const enabled = Boolean(appConfig.stockActivo);
   stockProductSelect.innerHTML = (state.products || []).map((p) => `<option value="${p.id}">${p.name}</option>`).join('');
   stockTable.innerHTML = (state.products || []).map((p) => {
-    const low = enabled && Number(p.stockCurrent || 0) <= Number(appConfig.stockMinimo || 0);
+    const min = productStockMin(p);
+    const tracked = p.stockEnabled !== false;
+    const low = enabled && tracked && Number(p.stockCurrent || 0) <= min;
     const alertText = low ? '⚠ Bajo stock' : '-';
     const alertClass = low ? 'stock-warning' : '';
-    return `<tr><td>${p.name}</td><td>${p.category || '-'}</td><td>${Number(p.stockCurrent || 0)}</td><td class="${alertClass}">${alertText}</td></tr>`;
+    return `<tr><td>${p.name}</td><td>${p.category || '-'}</td><td>${Number(p.stockCurrent || 0)}</td><td>${min}</td><td>${tracked ? 'Sí' : 'No'}</td><td class="${alertClass}">${alertText}</td></tr>`;
   }).join('');
 }
 
@@ -2701,8 +3772,8 @@ function addStockManually() {
 
 function exportStockToExcel() {
   if (!window.XLSX) return alert('No se pudo cargar XLSX.');
-  const rows = (state.products || []).map((p) => ({ PRODUCTO: String(p.name || '').trim(), 'CANTIDAD ACTUAL': Number(p.stockCurrent || 0) }));
-  const ws = XLSX.utils.json_to_sheet(rows, { header: ['PRODUCTO', 'CANTIDAD ACTUAL'] });
+  const rows = (state.products || []).map((p) => ({ PRODUCTO: String(p.name || '').trim(), 'CANTIDAD ACTUAL': Number(p.stockCurrent || 0), 'STOCK MÍNIMO': Number(p.stockMin ?? 0), ACTIVADO: p.stockEnabled !== false ? 1 : 0 }));
+  const ws = XLSX.utils.json_to_sheet(rows, { header: ['PRODUCTO', 'CANTIDAD ACTUAL', 'STOCK MÍNIMO', 'ACTIVADO'] });
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, 'STOCK');
   XLSX.writeFile(wb, 'stock_pos.xlsx');
@@ -2718,19 +3789,23 @@ function importStockFromExcelFile(file) {
       const rows = XLSX.utils.sheet_to_json(ws, { defval: '' });
       const headers = Object.keys(rows[0] || {});
       const expected = ['PRODUCTO', 'CANTIDAD ACTUAL'];
-      const valid = headers.length == expected.length && expected.every((h) => headers.includes(h));
-      if (!rows.length || !valid) return alert('Formato inválido. Use: PRODUCTO | CANTIDAD ACTUAL');
+      const valid = expected.every((h) => headers.includes(h));
+      if (!rows.length || !valid) return alert('Formato inválido. Use: PRODUCTO | CANTIDAD ACTUAL | STOCK MÍNIMO | ACTIVADO');
       let updated = 0;
       const errors = [];
       const map = new Map((state.products || []).map((p) => [normalizeProductName(p.name), p]));
       rows.forEach((row, idx) => {
         const name = String(row.PRODUCTO || '').trim();
         const add = Number(row['CANTIDAD ACTUAL']);
+        const minRaw = row['STOCK MÍNIMO'];
+        const enabledRaw = row.ACTIVADO;
         if (!name) return errors.push(`Fila ${idx + 2}: PRODUCTO vacío`);
         if (Number.isNaN(add)) return errors.push(`Fila ${idx + 2}: CANTIDAD ACTUAL inválida`);
         const prod = map.get(normalizeProductName(name));
         if (!prod) return errors.push(`Fila ${idx + 2}: producto no existe`);
         prod.stockCurrent = Number(prod.stockCurrent || 0) + add;
+        if (minRaw !== '' && minRaw !== undefined && minRaw !== null) prod.stockMin = Math.max(0, Number(minRaw || 0));
+        if (enabledRaw !== '' && enabledRaw !== undefined && enabledRaw !== null) prod.stockEnabled = Number(enabledRaw) === 1;
         updated += 1;
       });
       persist();
@@ -2762,24 +3837,100 @@ function openProductListView() {
 
 function renderImageRetryHint(kind, key, value) {
   const raw = String(value || '');
-  return raw;
+  if (!raw.startsWith('idb:')) return '';
   const meta = imageMissingRefs[raw];
   if (!meta?.missing) return '';
   return `<div class="upload-error">Imagen no disponible en este navegador.</div><button class="secondary" data-img-retry-kind="${kind}" data-img-retry-key="${escapeHtml(String(key || ''))}" type="button">Reintentar</button>`;
 }
 
+function getOrderedCategories(options = {}) {
+  const includeHidden = options.includeHidden !== false;
+  const ordered = [];
+  (state.categories || []).forEach((category) => {
+    const name = String(category || '').trim();
+    if (name && !ordered.includes(name)) ordered.push(name);
+  });
+  (state.products || []).forEach((product) => {
+    if (!includeHidden && product?.hidden) return;
+    const category = String(product?.category || '').trim();
+    if (category && !ordered.includes(category)) ordered.push(category);
+  });
+  return ordered;
+}
+
+function moveCategory(categoryName = '', direction = 0) {
+  const list = Array.isArray(state.categories) ? state.categories.slice() : [];
+  const from = list.findIndex((x) => String(x || '').trim() === String(categoryName || '').trim());
+  const step = Number(direction || 0);
+  const to = from + step;
+  if (from < 0 || step === 0 || to < 0 || to >= list.length) return false;
+  const temp = list[from];
+  list[from] = list[to];
+  list[to] = temp;
+  state.categories = list;
+  return true;
+}
+
+function reorderProductsWithinCategory(products = [], productId = '', direction = 0) {
+  const list = Array.isArray(products) ? products.map((p, idx) => ({ ...p, sortOrder: Number.isFinite(Number(p?.sortOrder)) ? Number(p.sortOrder) : idx })) : [];
+  const current = list.find((product) => product?.id === productId);
+  if (!current) return list;
+  const category = current?.category || '';
+  const siblings = list
+    .filter((product) => (product?.category || '') === category)
+    .sort((a, b) => Number(a.sortOrder || 0) - Number(b.sortOrder || 0));
+  const siblingIndex = siblings.findIndex((product) => product?.id === productId);
+  const targetSiblingIndex = siblingIndex + Number(direction || 0);
+  if (siblingIndex < 0 || targetSiblingIndex < 0 || targetSiblingIndex >= siblings.length) return list;
+  const target = siblings[targetSiblingIndex];
+  const currentOrder = Number(current.sortOrder || 0);
+  const targetOrder = Number(target.sortOrder || 0);
+  current.sortOrder = targetOrder;
+  target.sortOrder = currentOrder;
+  return list;
+}
+
+function moveProductWithinCategory(productId = '', direction = 0) {
+  const nextProducts = reorderProductsWithinCategory(state.products || [], productId, direction);
+  const changed = nextProducts.some((product, index) => Number(product?.sortOrder || 0) !== Number(state.products?.[index]?.sortOrder || 0));
+  if (changed) state.products = nextProducts.map((product) => ({ ...product, modifiedAt: Date.now() }));
+  return changed;
+}
+
 function renderProducts() {
   const selectedCategory = productCategory?.value || '';
-  const sorted = state.products.slice().sort((a, b) => Number(Boolean(a.hidden)) - Number(Boolean(b.hidden)));
+  const orderedCategories = getOrderedCategories({ includeHidden: true });
   const productsHead = productsTable?.closest('table')?.querySelector('thead tr');
-  if (productsHead) productsHead.innerHTML = '<th>Categoría</th><th>Producto</th><th>Precio</th><th>Acciones</th><th>Imagen</th>';
+  if (productsHead) productsHead.innerHTML = '<th>Categoría</th><th>Producto</th><th>Costo</th><th>Precio</th><th>Acciones</th><th>Imagen</th>';
   const categoriesHead = categoriesTable?.closest('table')?.querySelector('thead tr');
   if (categoriesHead) categoriesHead.innerHTML = '<th>Categoría</th><th>Acciones</th><th>Imagen</th>';
-  if (productsTable) productsTable.innerHTML = sorted.map((p) => { const st = getImageUploadStatus('product', p.id); const uploadBtnText = st?.uploading ? 'Subiendo...' : 'Subir imagen'; const prodSrc = resolveImageSource(p.imageUrl || p.imageDataUrl); const imageBlock = prodSrc ? `<div class=\"image-cell\"><img class=\"image-thumb\" src=\"${prodSrc}\" alt=\"${p.name}\" loading=\"lazy\" /><button class=\"danger\" data-prod-img-del=\"${p.id}\" type=\"button\">X</button></div>` : '<span class=\"muted\">Sin imagen</span>'; const err = st?.error ? `<div class=\"upload-error\">${st.error}</div>` : ''; const retry = renderImageRetryHint('product', p.id, p.imageUrl || p.imageDataUrl); return `<tr><td>${p.category || '-'}</td><td>${p.name}</td><td>${money(p.price)}</td><td><button class=\"secondary\" data-prod-edit=\"${p.id}\" type=\"button\">Editar</button> <button class=\"secondary\" data-prod-img=\"${p.id}\" type=\"button\" ${st?.uploading ? 'disabled' : ''}>${uploadBtnText}</button> <button class=\"secondary\" data-prod-hide=\"${p.id}\" type=\"button\">${p.hidden ? 'Mostrar' : 'Ocultar'}</button> <button class=\"secondary\" data-prod-del=\"${p.id}\" type=\"button\">Eliminar</button></td><td>${imageBlock}${renderImageUploadProgress('product', p.id)}${err}${retry}</td></tr>`; }).join('');
-  if (categoriesTable) categoriesTable.innerHTML = (state.categories || []).map((c) => { const st = getImageUploadStatus('category', c); const uploadBtnText = st?.uploading ? 'Subiendo...' : 'Subir imagen'; const catSrc = resolveImageSource(state.categoryImages?.[c]); const imageBlock = catSrc ? `<div class=\"image-cell\"><img class=\"image-thumb\" src=\"${catSrc}\" alt=\"${c}\" loading=\"lazy\" /><button class=\"danger\" data-cat-img-del=\"${c}\" type=\"button\">X</button></div>` : '<span class=\"muted\">Sin imagen</span>'; const err = st?.error ? `<div class=\"upload-error\">${st.error}</div>` : ''; const retry = renderImageRetryHint('category', c, state.categoryImages?.[c]); return `<tr><td>${c}</td><td><button class=\"secondary\" data-cat-img=\"${c}\" type=\"button\" ${st?.uploading ? 'disabled' : ''}>${uploadBtnText}</button> ${c === 'Todos' ? '' : `<button class=\"secondary\" data-cat-del=\"${c}\" type=\"button\">Eliminar</button>`}</td><td>${imageBlock}${renderImageUploadProgress('category', c)}${err}${retry}</td></tr>`; }).join('');
+  if (productsTable) {
+    const rows = [];
+    orderedCategories.forEach((category) => {
+      const productsInCategory = (state.products || [])
+        .filter((product) => (product.category || '') === category)
+        .sort((a, b) => Number(a.sortOrder || 0) - Number(b.sortOrder || 0));
+      if (!productsInCategory.length) return;
+      rows.push(`<tr class="products-category-divider"><td colspan="6"><strong>${escapeHtml(category)}</strong></td></tr>`);
+      productsInCategory.forEach((p, index) => {
+        const currentCategory = p.category || 'Sin categoría';
+        const st = getImageUploadStatus('product', p.id);
+        const uploadBtnText = st?.uploading ? 'Subiendo...' : 'Subir imagen';
+        const prodSrc = resolveImageSource(p.imageUrl || p.imageDataUrl);
+        const imageBlock = prodSrc ? `<div class="image-cell"><img class="image-thumb" src="${prodSrc}" alt="${p.name}" loading="lazy" /><button class="danger" data-prod-img-del="${p.id}" type="button">X</button></div>` : '<span class="muted">Sin imagen</span>';
+        const err = st?.error ? `<div class="upload-error">${st.error}</div>` : '';
+        const retry = renderImageRetryHint('product', p.id, p.imageUrl || p.imageDataUrl);
+        const upDisabled = index === 0 ? 'disabled' : '';
+        const downDisabled = index === productsInCategory.length - 1 ? 'disabled' : '';
+        rows.push(`<tr><td>${escapeHtml(currentCategory)}</td><td>${escapeHtml(p.name || '')}${p.hidden ? ' <span class="muted">(Oculto)</span>' : ''}</td><td>${money(Number(p.cost || 0))}</td><td>${money(p.price)}</td><td><button class="secondary" data-prod-up="${p.id}" type="button" ${upDisabled}>↑</button> <button class="secondary" data-prod-down="${p.id}" type="button" ${downDisabled}>↓</button> <button class="secondary" data-prod-edit="${p.id}" type="button">Editar</button> <button class="secondary" data-prod-img="${p.id}" type="button" ${st?.uploading ? 'disabled' : ''}>${uploadBtnText}</button> <button class="secondary" data-prod-hide="${p.id}" type="button">${p.hidden ? 'Mostrar' : 'Ocultar'}</button> <button class="secondary" data-prod-del="${p.id}" type="button">Eliminar</button></td><td>${imageBlock}${renderImageUploadProgress('product', p.id)}${err}${retry}</td></tr>`);
+      });
+    });
+    productsTable.innerHTML = rows.join('');
+  }
+  if (categoriesTable) categoriesTable.innerHTML = (state.categories || []).map((c, index, arr) => { const st = getImageUploadStatus('category', c); const uploadBtnText = st?.uploading ? 'Subiendo...' : 'Subir imagen'; const catSrc = resolveImageSource(state.categoryImages?.[c]); const imageBlock = catSrc ? `<div class="image-cell"><img class="image-thumb" src="${catSrc}" alt="${c}" loading="lazy" /><button class="danger" data-cat-img-del="${c}" type="button">X</button></div>` : '<span class="muted">Sin imagen</span>'; const err = st?.error ? `<div class="upload-error">${st.error}</div>` : ''; const retry = renderImageRetryHint('category', c, state.categoryImages?.[c]); const upDisabled = index === 0 ? 'disabled' : ''; const downDisabled = index === arr.length - 1 ? 'disabled' : ''; return `<tr><td>${c}</td><td><button class="secondary" data-cat-up="${c}" type="button" ${upDisabled}>↑</button> <button class="secondary" data-cat-down="${c}" type="button" ${downDisabled}>↓</button> <button class="secondary" data-cat-img="${c}" type="button" ${st?.uploading ? 'disabled' : ''}>${uploadBtnText}</button> ${c === 'Todos' ? '' : `<button class="secondary" data-cat-del="${c}" type="button">Eliminar</button>`}</td><td>${imageBlock}${renderImageUploadProgress('category', c)}${err}${retry}</td></tr>`; }).join('');
   if (productCategory) {
-    productCategory.innerHTML = (state.categories || []).map((c) => `<option value="${c}">${c}</option>`).join('');
-    if (selectedCategory && state.categories.includes(selectedCategory)) productCategory.value = selectedCategory;
+    productCategory.innerHTML = orderedCategories.map((c) => `<option value="${c}">${c}</option>`).join('');
+    if (selectedCategory && orderedCategories.includes(selectedCategory)) productCategory.value = selectedCategory;
   }
   if (comboProductsSelect) comboProductsSelect.innerHTML = state.products.filter((p) => !p.hidden).map((p) => `<option value="${p.id}">${p.name}</option>`).join('');
   if (openStockBtn) openStockBtn.classList.toggle('hidden', !appConfig.stockActivo);
@@ -2791,7 +3942,7 @@ function renderProducts() {
 function renderComboBuilder() {
   const host = document.getElementById('comboItemsTable');
   if (!host) return;
-  const cats = [...new Set(state.products.filter((p) => !p.hidden).map((p) => p.category))];
+  const cats = getOrderedCategories({ includeHidden: false }).filter((category) => state.products.some((p) => !p.hidden && p.category === category));
   const toolbarId = 'comboBuilderToolbar';
   let toolbar = document.getElementById(toolbarId);
   if (!toolbar) {
@@ -2862,6 +4013,7 @@ function renderSummary() {
     if (summaryCashDetail) summaryCashDetail.textContent = money(0);
     if (summaryQrDetail) summaryQrDetail.textContent = money(0);
     if (summaryBox) summaryBox.textContent = money(0);
+    if (summaryDebtDay) summaryDebtDay.textContent = money(0);
     if (summaryDebt) summaryDebt.textContent = money(0);
     if (summaryCash) summaryCash.textContent = money(0);
     if (summaryBoxInCash) summaryBoxInCash.textContent = money(0);
@@ -2875,10 +4027,12 @@ function renderSummary() {
     if (summaryFinalQr) summaryFinalQr.textContent = money(0);
     if (cashTotalBox) cashTotalBox.textContent = money(0);
     if (qrTotalBox) qrTotalBox.textContent = money(0);
+    renderDailySalesSummaryToggle();
     return;
   }
 
-  const sales = salesForActiveCashBox().filter((s) => !s.carryOverDebt);
+  const sales = salesForActiveCashBox().filter((s) => isCountableActiveSale(s));
+  console.info('[sale][summary] calculando resumen', { activeCashBoxId: state.activeCashBoxId || '', salesCount: sales.length });
   const debtPayments = activeDebtPayments().filter((p) => p.cashBoxId === state.activeCashBoxId);
   const cashSales = sales.reduce((a, s) => a + Number(s.breakdown?.cash || 0), 0);
   const qrSales = sales.reduce((a, s) => a + Number(s.breakdown?.qr || 0), 0);
@@ -2886,6 +4040,7 @@ function renderSummary() {
   const debtQr = debtPayments.reduce((a, p) => a + Number(p.qrAmount || (p.method === 'qr' ? p.amount : 0) || 0), 0);
   const cashInTotal = cashSales + debtCash;
   const qrInTotal = qrSales + debtQr;
+  const debtDay = sales.reduce((a, s) => a + Number(s.debtAmount || 0), 0);
   const debtPending = state.sales.reduce((a, s) => a + Number(s.debtAmount || 0), 0);
   const outflows = (state.outflows || []).filter((o) => o.cashBoxId === state.activeCashBoxId);
   const outCash = outflows.filter((o) => o.direction === 'salida' && o.method === 'efectivo').reduce((a, o) => a + Number(o.amount || 0), 0);
@@ -2894,12 +4049,14 @@ function renderSummary() {
   const inQr = outflows.filter((o) => o.direction === 'entrada' && o.method === 'qr').reduce((a, o) => a + Number(o.amount || 0), 0);
   const opening = Number(activeCash.openingCash || 0);
   const total = cashInTotal + qrInTotal + opening;
+  console.info('[sale][cash]', { activeCashBoxId: state.activeCashBoxId || '', cashInTotal, qrInTotal, opening, total });
 
   if (summarySalesCount) summarySalesCount.textContent = String(sales.length);
   if (summaryTotal) summaryTotal.textContent = money(total);
   if (summaryCashDetail) summaryCashDetail.textContent = money(cashInTotal);
   if (summaryQrDetail) summaryQrDetail.textContent = money(qrInTotal);
   if (summaryBox) summaryBox.textContent = money(opening);
+  if (summaryDebtDay) summaryDebtDay.textContent = money(debtDay);
   if (summaryDebt) summaryDebt.textContent = money(debtPending);
   if (summaryCash) summaryCash.textContent = money(cashInTotal);
   if (summaryBoxInCash) summaryBoxInCash.textContent = money(opening);
@@ -2914,21 +4071,90 @@ function renderSummary() {
   if (summaryInQr) summaryInQr.textContent = money(inQr);
   if (summaryFinalQr) summaryFinalQr.textContent = money(qrInTotal + inQr - outQr);
   if (qrTotalBox) qrTotalBox.textContent = money(qrInTotal + inQr - outQr);
+  renderDailySalesSummaryToggle();
+}
+
+function dailySalesRowsForSummary() {
+  const activeCashId = state.activeCashBoxId;
+  if (!activeCashId) return [];
+  const activeRows = salesForActiveCashBox().map((sale) => ({ ...sale, saleStatus: 'OK' }));
+  const annulledRows = (state.deletedSales || [])
+    .filter((sale) => sale?.cashBoxId === activeCashId)
+    .map((sale) => ({ ...sale, saleStatus: 'ANULADA' }));
+  const uniqueRows = new Map();
+  [...annulledRows, ...activeRows].forEach((sale) => {
+    const key = sale.id || `${sale.orderNumber}-${sale.createdAt}`;
+    uniqueRows.set(key, sale);
+  });
+  return [...uniqueRows.values()].sort((a, b) => Number(new Date(b.createdAt || 0)) - Number(new Date(a.createdAt || 0)));
+}
+
+function renderDailySalesSummaryToggle() {
+  const summaryPanel = document.getElementById('resumen');
+  if (!summaryPanel) return;
+  let host = document.getElementById('dailySalesSummaryCard');
+  if (!host) {
+    host = document.createElement('div');
+    host.id = 'dailySalesSummaryCard';
+    host.className = 'card';
+    const summaryGrid = summaryPanel.querySelector('.summary-grid');
+    if (summaryGrid?.nextSibling) summaryPanel.insertBefore(host, summaryGrid.nextSibling);
+    else summaryPanel.appendChild(host);
+  }
+  host.innerHTML = `<button id="toggleDailySalesBtn" class="secondary" type="button">${summaryDailySalesVisible ? 'Ocultar' : 'Ver ventas del día'}</button><div id="dailySalesSummaryBody" class="${summaryDailySalesVisible ? '' : 'hidden'}"></div>`;
+  const body = host.querySelector('#dailySalesSummaryBody');
+  host.querySelector('#toggleDailySalesBtn')?.addEventListener('click', () => {
+    summaryDailySalesVisible = !summaryDailySalesVisible;
+    renderDailySalesSummaryToggle();
+  });
+  if (!summaryDailySalesVisible || !body) return;
+  const rows = dailySalesRowsForSummary();
+  const totals = rows.reduce((acc, sale) => {
+    if (isSaleAnnulled(sale) || sale.saleStatus === 'ANULADA') return acc;
+    acc.cash += Number(sale.breakdown?.cash || 0);
+    acc.qr += Number(sale.breakdown?.qr || 0);
+    acc.debt += Number(sale.debtAmount || 0);
+    return acc;
+  }, { cash: 0, qr: 0, debt: 0 });
+  body.innerHTML = `<table><thead><tr><th>Nro pedido</th><th>Fecha</th><th>Monto</th><th>Efectivo</th><th>QR</th><th>Deudas</th><th>Estado</th></tr></thead><tbody>${rows.length ? rows.map((sale) => {
+    const isAnnulled = isSaleAnnulled(sale) || sale.saleStatus === 'ANULADA';
+    const status = isAnnulled ? 'ANULADA' : 'OK';
+    const style = isAnnulled ? 'color:#c1121f;font-weight:700;' : '';
+    const total = isAnnulled ? 0 : Number(sale.total || 0);
+    const cash = isAnnulled ? 0 : Number(sale.breakdown?.cash || 0);
+    const qr = isAnnulled ? 0 : Number(sale.breakdown?.qr || 0);
+    const debt = isAnnulled ? 0 : Number(sale.debtAmount || 0);
+    return `<tr style="${style}"><td>${orderNumberLabel(sale.orderNumber)}</td><td>${new Date(sale.createdAt || Date.now()).toLocaleString()}</td><td>${money(total)}</td><td>${money(cash)}</td><td>${money(qr)}</td><td>${money(debt)}</td><td>${status}</td></tr>`;
+  }).join('') : '<tr><td colspan="7">Sin ventas registradas en la caja actual.</td></tr>'}</tbody><tfoot><tr><th colspan="3">Totales (sin anuladas)</th><th>${money(totals.cash)}</th><th>${money(totals.qr)}</th><th>${money(totals.debt)}</th><th></th></tr></tfoot></table><div style="margin-top:.6rem;"><button id="hideDailySalesBtn" class="secondary" type="button">Ocultar</button></div>`;
+  body.querySelector('#hideDailySalesBtn')?.addEventListener('click', () => {
+    summaryDailySalesVisible = false;
+    renderDailySalesSummaryToggle();
+  });
 }
 
 
 
 function renderSoldProductsList() {
   if (!soldProductsTable) return;
-  const list = salesForActiveCashBox().filter((sale) => !sale.carryOverDebt);
+  const list = salesForActiveCashBox().filter((sale) => isCountableActiveSale(sale));
   const map = new Map();
   list.forEach((sale) => (sale.items || []).forEach((it) => {
     const key = it.name;
-    map.set(key, (map.get(key) || 0) + Number(it.qty || 0));
+    if (!map.has(key)) map.set(key, { qty: 0, cost: 0, total: 0 });
+    const row = map.get(key);
+    const qty = Number(it.qty || 0);
+    const total = Number(it.finalSubtotal ?? (it.price * it.qty) ?? 0);
+    const cost = Math.max(0, Number((it.cost ?? state.products.find((p) => p.id === it.id)?.cost ?? 0))) * qty;
+    row.qty += qty;
+    row.cost += cost;
+    row.total += total;
   }));
   soldProductsTable.innerHTML = map.size
-    ? [...map.entries()].map(([name, qty]) => `<tr><td>${name}</td><td>${qty}</td></tr>`).join('')
-    : '<tr><td colspan="2">Sin ventas en la caja actual.</td></tr>';
+    ? [...map.entries()].map(([name, row]) => {
+      const profit = row.total - row.cost;
+      return `<tr><td>${name}</td><td>${row.qty}</td><td>${money(row.cost)}</td><td>${money(profit)}</td><td>${money(row.total)}</td></tr>`;
+    }).join('')
+    : '<tr><td colspan="5">Sin ventas en la caja actual.</td></tr>';
 }
 
 function escapeHtml(value) {
@@ -3266,6 +4492,8 @@ async function openSaleInvoiceWindow(sale, options = {}) {
 
 function renderSalesHistory() {
   if (!salesTable) return;
+  const salesHead = salesTable.closest('table')?.querySelector('thead tr');
+  if (salesHead) salesHead.innerHTML = '<th>Número de pedido</th><th>Fecha</th><th>Monto</th><th>Método de pago</th><th>Efectivo</th><th>QR</th><th>Deudas</th><th>Estado</th><th>Acción</th><th>Usuario</th>';
   const userFilter = salesUserFilter?.value || '';
   const users = ['<option value="">Todos los usuarios</option>'].concat(state.users.map((u) => `<option value="${u.username}">${u.username}</option>`));
   if (salesUserFilter) {
@@ -3273,20 +4501,38 @@ function renderSalesHistory() {
     salesUserFilter.innerHTML = users.join('');
     salesUserFilter.value = prev;
   }
-  const validSales = salesForActiveCashBox().filter((sale) => !sale.carryOverDebt).map((sale) => ({ ...sale, saleStatus: 'OK', saleStatusClass: '' }));
-  const deletedSales = (state.deletedSales || []).filter((sale) => !state.activeCashBoxId || sale.cashBoxId === state.activeCashBoxId).map((sale) => ({ ...sale, saleStatus: 'ANULADA', saleStatusClass: 'sale-annulled' }));
-  let list = [...validSales, ...deletedSales].slice();
+  const salesInBox = salesForActiveCashBox().filter((sale) => !sale.carryOverDebt);
+  const mappedSales = salesInBox.map((sale) => ({ ...sale, saleStatus: isSaleAnnulled(sale) ? 'ANULADA' : 'OK', saleStatusClass: isSaleAnnulled(sale) ? 'sale-annulled' : '' }));
+  console.info('[sale][history] render historial', { activeCashBoxId: state.activeCashBoxId || '', validSalesCount: mappedSales.length, deletedSalesCount: (state.deletedSales || []).length });
+  const existingIds = new Set(mappedSales.map((sale) => String(sale.id || '')));
+  const deletedSales = (state.deletedSales || [])
+    .filter((sale) => (!state.activeCashBoxId || sale.cashBoxId === state.activeCashBoxId) && !existingIds.has(String(sale.id || '')))
+    .map((sale) => ({ ...sale, saleStatus: 'ANULADA', saleStatusClass: 'sale-annulled' }));
+  let list = [...mappedSales, ...deletedSales].slice();
   const searchOrder = (salesOrderSearchInput?.value || '').trim();
   if (userFilter) list = list.filter((s) => s.user === userFilter);
   if (searchOrder) list = list.filter((s) => String(s.orderNumber || '').includes(searchOrder));
   list.sort((a, b) => new Date(b.createdAt || b.deletedAt || 0) - new Date(a.createdAt || a.deletedAt || 0));
+  const totals = list.reduce((acc, sale) => {
+    if (sale.saleStatus === 'ANULADA' || isSaleAnnulled(sale)) return acc;
+    acc.total += Number(sale.total || 0);
+    acc.cash += Number(sale.breakdown?.cash || 0);
+    acc.qr += Number(sale.breakdown?.qr || 0);
+    acc.debt += Number(sale.debtAmount || 0);
+    return acc;
+  }, { total: 0, cash: 0, qr: 0, debt: 0 });
   salesTable.innerHTML = list.length ? list.map((sale) => {
     const isAnnulled = sale.saleStatus === 'ANULADA';
     const actions = isAnnulled
-      ? `<span class="muted">Venta anulada${sale.deletedBy ? ` · eliminado por ${sale.deletedBy}` : ''}</span>`
-      : `<button type="button" class="secondary" data-sale-act="view" data-sale-id="${sale.id}">Ver Venta</button> <button type="button" class="secondary" data-sale-act="invoice" data-sale-id="${sale.id}">Ver factura</button>${hasPermission('deleteSales') ? ` <button type="button" class="secondary" data-sale-act="edit" data-sale-id="${sale.id}">Editar venta</button> <button type="button" class="secondary" data-sale-act="del" data-sale-id="${sale.id}">Eliminar venta</button>` : ''}`;
-    return `<tr style="${isAnnulled ? 'color:#c1121f;font-weight:700;' : ''}"><td>#${orderNumberLabel(sale.orderNumber)}</td><td>${new Date(sale.createdAt || sale.deletedAt).toLocaleString()}</td><td>${money(sale.total)}</td><td>${sale.payment}</td><td style="${isAnnulled ? 'color:#c1121f;font-weight:700;' : ''}">${sale.saleStatus}</td><td>${actions}</td><td>${sale.user}</td></tr>`;
-  }).join('') : '<tr><td colspan="7">Sin ventas.</td></tr>';
+      ? `<span class="muted">Venta anulada${sale.deletedBy ? ` · anulada por ${escapeHtml(sale.deletedBy)}` : ''}</span>`
+      : `<button type="button" class="secondary" data-sale-act="view" data-sale-id="${sale.id}">Ver Venta</button> <button type="button" class="secondary" data-sale-act="invoice" data-sale-id="${sale.id}">Ver factura</button>${hasPermission('deleteSales') ? ` <button type="button" class="secondary" data-sale-act="edit" data-sale-id="${sale.id}">Editar venta</button> <button type="button" class="secondary" data-sale-act="del" data-sale-id="${sale.id}">Anular venta</button>` : ''}`;
+    const statusCell = isAnnulled ? `ANULADA${sale.deletedBy ? `<br><small>anulada por: ${escapeHtml(sale.deletedBy)}</small>` : ''}` : sale.saleStatus;
+    const cash = Number(sale.breakdown?.cash || 0);
+    const qr = Number(sale.breakdown?.qr || 0);
+    const debt = Number(sale.debtAmount || 0);
+    return `<tr style="${isAnnulled ? 'color:#c1121f;font-weight:700;' : ''}"><td>#${orderNumberLabel(sale.orderNumber)}</td><td>${new Date(sale.createdAt || sale.deletedAt).toLocaleString()}</td><td>${money(sale.total)}</td><td>${sale.payment}</td><td>${money(cash)}</td><td>${money(qr)}</td><td>${money(debt)}</td><td style="${isAnnulled ? 'color:#c1121f;font-weight:700;' : ''}">${statusCell}</td><td>${actions}</td><td>${sale.user}</td></tr>`;
+  }).join('') + `<tr><th colspan="2">Totales (sin anuladas)</th><th>${money(totals.total)}</th><th></th><th>${money(totals.cash)}</th><th>${money(totals.qr)}</th><th>${money(totals.debt)}</th><th colspan="3"></th></tr>` : '<tr><td colspan="10">Sin ventas.</td></tr>';
+  refreshPendingSyncButtons();
 }
 
 
@@ -3304,7 +4550,7 @@ function renderDeletedSales() {
 
 function renderProductSalesReport() {
   if (!productSalesReportTable) return;
-  const list = salesForActiveCashBox().filter((sale) => !sale.carryOverDebt).slice();
+  const list = salesForActiveCashBox().filter((sale) => isCountableActiveSale(sale)).slice();
   const map = new Map();
   list.forEach((sale) => {
     sale.items?.forEach((it) => {
@@ -3339,8 +4585,8 @@ function openSaleEditModal(sale) {
     if (pid) {
       const p = state.products.find((x) => x.id === pid);
       if (p) {
-        if (isStockEnabled() && Number(p.stockCurrent || 0) < qty) { alert('Stock insuficiente para agregar producto.'); return; }
-        if (isStockEnabled() && Array.isArray(p.combo) && p.combo.length) {
+        if (isProductStockTracked(p) && Number(p.stockCurrent || 0) < qty) { alert('Stock insuficiente para agregar producto.'); return; }
+        if (isProductStockTracked(p) && Array.isArray(p.combo) && p.combo.length) {
           const req = comboComponentRequirements(p, qty);
           const missing = [...req.entries()].find(([componentId, neededQty]) => {
             const component = state.products.find((x) => x.id === componentId);
@@ -3352,15 +4598,15 @@ function openSaleEditModal(sale) {
             return;
           }
         }
-        if (isStockEnabled()) p.stockCurrent = Number(p.stockCurrent || 0) - qty;
-        if (isStockEnabled() && Array.isArray(p.combo) && p.combo.length) {
+        if (isProductStockTracked(p)) p.stockCurrent = Number(p.stockCurrent || 0) - qty;
+        if (isProductStockTracked(p) && Array.isArray(p.combo) && p.combo.length) {
           const req = comboComponentRequirements(p, qty);
           req.forEach((neededQty, componentId) => {
             const component = state.products.find((x) => x.id === componentId);
             if (component) component.stockCurrent = Number(component.stockCurrent || 0) - Number(neededQty || 0);
           });
         }
-        sale.items.push({ id: p.id, name: p.name, qty, price: p.price, discountPct: 0, finalSubtotal: p.price * qty });
+        sale.items.push({ id: p.id, name: p.name, qty, cost: Number(p.cost || 0), price: p.price, discountPct: 0, finalSubtotal: p.price * qty });
       }
     }
     sale.total = sale.items.reduce((a, i) => a + Number(i.finalSubtotal ?? (i.price * i.qty)), 0);
@@ -3375,16 +4621,64 @@ function openSaleEditModal(sale) {
 }
 
 
+function applyDebtPaymentToSales(targetSales = [], options = {}) {
+  const method = options.method || 'efectivo';
+  const paidAt = options.paidAt || new Date().toISOString();
+  const paidBy = options.paidBy || '-';
+  const cashBoxId = options.cashBoxId || '';
+  const totalDebtAmount = targetSales.reduce((sum, sale) => sum + Number(sale?.debtAmount || 0), 0);
+  let remainingCashMixed = method === 'mixto' ? Math.max(0, Math.min(totalDebtAmount, Number(options.mixedCashAmount || 0))) : 0;
+  const createdPayments = [];
+  targetSales.forEach((sale) => {
+    const amount = Number(sale?.debtAmount || 0);
+    if (amount <= 0) return;
+    let cashPaid = 0;
+    let qrPaid = 0;
+    if (method === 'efectivo') cashPaid = amount;
+    if (method === 'qr') qrPaid = amount;
+    if (method === 'mixto') {
+      cashPaid = Math.min(amount, remainingCashMixed);
+      qrPaid = amount - cashPaid;
+      remainingCashMixed -= cashPaid;
+    }
+    sale.debtAmount = 0;
+    sale.paymentStatus = 'realizado';
+    sale.modifiedAt = Date.now();
+    createdPayments.push({
+      id: uid(),
+      paidAt,
+      modifiedAt: Date.now(),
+      saleCreatedAt: sale.createdAt,
+      debtorId: sale.debtorId,
+      saleId: sale.id,
+      method,
+      amount,
+      cashAmount: cashPaid,
+      qrAmount: qrPaid,
+      cashBoxId,
+      paidBy,
+      archivado: false,
+      anulado: false,
+      anuladoPorVentaId: ''
+    });
+  });
+  return { totalDebtAmount, createdPayments };
+}
+
 function openDebtPaymentModal({ saleIds = [], debtorId = '' } = {}) {
   document.getElementById('debtPayOverlay')?.remove();
   const overlay = document.createElement('div');
   overlay.id = 'debtPayOverlay';
   overlay.className = 'modal';
-  overlay.innerHTML = `<div class="modal-card"><h3>Realizar pago</h3><div class="grid3"><label>Método<select id="dpMethod"><option value="efectivo">Efectivo</option><option value="qr">QR</option><option value="mixto">Mixto</option></select></label><label id="dpCashWrap" class="hidden">Efectivo<input id="dpCash" type="number" min="0" step="0.01" value="0" /></label><label id="dpQrWrap" class="hidden">QR<input id="dpQr" type="text" readonly value="Bs 0.00" /></label></div><div class="grid2"><button id="dpPayBtn" class="primary" type="button">Finalizar</button><button id="dpBackBtn" class="secondary" type="button">Atrás</button></div></div>`;
+  const singleSaleMode = saleIds.length === 1 && !debtorId;
+  overlay.innerHTML = `<div class="modal-card"><h3>Realizar pago</h3><div class="grid3"><label>Método<select id="dpMethod"><option value="efectivo">Efectivo</option><option value="qr">QR</option><option value="mixto">Mixto</option></select></label><label id="dpAmountWrap" class="${singleSaleMode ? '' : 'hidden'}">Monto a pagar<input id="dpAmount" type="number" min="0.01" step="0.01" value="0" /></label><label id="dpCashWrap" class="hidden">Efectivo<input id="dpCash" type="number" min="0" step="0.01" value="0" /></label><label id="dpQrWrap" class="hidden">QR<input id="dpQr" type="text" readonly value="Bs 0.00" /></label></div><div class="grid2"><button id="dpPayBtn" class="primary" type="button">Finalizar</button><button id="dpBackBtn" class="secondary" type="button">Atrás</button></div></div>`;
   document.body.appendChild(overlay);
-  const getTargetSales = () => saleIds.length ? state.sales.filter((s) => saleIds.includes(s.id)) : state.sales.filter((s) => s.debtorId === debtorId && Number(s.debtAmount || 0) > 0);
+  const getTargetSales = () => saleIds.length
+    ? state.sales.filter((s) => saleIds.includes(s.id) && Number(s.debtAmount || 0) > 0 && s.paymentStatus !== 'realizado' && !isSaleAnnulled(s))
+    : state.sales.filter((s) => s.debtorId === debtorId && Number(s.debtAmount || 0) > 0 && s.paymentStatus !== 'realizado' && !isSaleAnnulled(s));
   const totalDebt = () => getTargetSales().reduce((a, s) => a + Number(s.debtAmount || 0), 0);
   const methodEl = document.getElementById('dpMethod');
+  const amountEl = document.getElementById('dpAmount');
   const cashEl = document.getElementById('dpCash');
   const qrEl = document.getElementById('dpQr');
   const cashWrap = document.getElementById('dpCashWrap');
@@ -3393,36 +4687,44 @@ function openDebtPaymentModal({ saleIds = [], debtorId = '' } = {}) {
     const mixed = methodEl?.value === 'mixto';
     cashWrap?.classList.toggle('hidden', !mixed);
     qrWrap?.classList.toggle('hidden', !mixed);
-    if (mixed && qrEl) qrEl.value = money(Math.max(0, totalDebt() - Number(cashEl?.value || 0)));
+    const due = singleSaleMode ? Number(getTargetSales()[0]?.debtAmount || 0) : totalDebt();
+    if (singleSaleMode && amountEl) {
+      const val = Number(amountEl.value || 0);
+      if (!val || val > due) amountEl.value = due > 0 ? due.toFixed(2) : '0';
+    }
+    const amountForMixed = singleSaleMode ? Number(amountEl?.value || 0) : due;
+    if (mixed && qrEl) qrEl.value = money(Math.max(0, amountForMixed - Number(cashEl?.value || 0)));
   };
   methodEl?.addEventListener('change', sync);
+  amountEl?.addEventListener('input', sync);
   cashEl?.addEventListener('input', sync);
   sync();
   document.getElementById('dpBackBtn')?.addEventListener('click', () => overlay.remove());
-  document.getElementById('dpPayBtn')?.addEventListener('click', () => {
+  document.getElementById('dpPayBtn')?.addEventListener('click', async () => {
+    console.info('[debt][pay-start]', { saleIds, debtorId });
     const method = methodEl?.value || 'efectivo';
     const targets = getTargetSales().sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
+    if (!targets.length) { alert('No hay deudas pendientes para pagar.'); return; }
     const activeCash = getActiveCashBox();
-    const hasActiveCash = Boolean(activeCash);
-    const totalDebtAmount = targets.reduce((a, s) => a + Number(s.debtAmount || 0), 0);
-    let remainingCashMixed = method === 'mixto' ? Math.max(0, Math.min(totalDebtAmount, Number(cashEl?.value || 0))) : 0;
-    targets.forEach((sale) => {
-      const amount = Number(sale.debtAmount || 0);
-      if (amount <= 0) return;
-      let cashPaid = 0;
-      let qrPaid = 0;
-      if (method === 'efectivo') cashPaid = amount;
-      if (method === 'qr') qrPaid = amount;
-      if (method === 'mixto') {
-        cashPaid = Math.min(amount, remainingCashMixed);
-        qrPaid = amount - cashPaid;
-        remainingCashMixed -= cashPaid;
-      }
-      sale.debtAmount = 0;
-      sale.paymentStatus = 'realizado';
-      state.debtPayments.unshift({
+    let result;
+    if (singleSaleMode) {
+      const sale = targets[0];
+      const currentDebt = Number(sale?.debtAmount || 0);
+      const enteredAmount = Number(amountEl?.value || 0);
+      const amount = Math.max(0, Math.min(currentDebt, enteredAmount));
+      if (amount <= 0) { alert('Ingresa un monto válido para pagar la deuda.'); return; }
+      const mixedCash = Math.max(0, Math.min(amount, Number(cashEl?.value || 0)));
+      const cashPaid = method === 'efectivo' ? amount : (method === 'mixto' ? mixedCash : 0);
+      const qrPaid = method === 'qr' ? amount : (method === 'mixto' ? Math.max(0, amount - mixedCash) : 0);
+      sale.debtAmount = Math.max(0, currentDebt - amount);
+      sale.paymentStatus = sale.debtAmount <= 0 ? 'realizado' : 'pendiente';
+      sale.modifiedAt = Date.now();
+      const paymentCount = (state.debtPayments || []).filter((p) => p.saleId === sale.id && !p.anulado).length + 1;
+      const baseDetail = sale?.items?.map((i) => `${i.name} x${i.qty}`).join(', ') || 'Compra';
+      const createdPayment = {
         id: uid(),
         paidAt: new Date().toISOString(),
+        modifiedAt: Date.now(),
         saleCreatedAt: sale.createdAt,
         debtorId: sale.debtorId,
         saleId: sale.id,
@@ -3430,22 +4732,105 @@ function openDebtPaymentModal({ saleIds = [], debtorId = '' } = {}) {
         amount,
         cashAmount: cashPaid,
         qrAmount: qrPaid,
-        cashBoxId: hasActiveCash ? activeCash.id : '',
+        cashBoxId: activeCash?.id || '',
         paidBy: state.currentUser?.username || '-',
         archivado: false,
         anulado: false,
-        anuladoPorVentaId: ''
+        anuladoPorVentaId: '',
+        detailLabel: `${baseDetail} (${paymentOrdinalLabel(paymentCount)})`,
+        paymentNumber: paymentCount,
+        partialPayment: sale.debtAmount > 0
+      };
+      result = { totalDebtAmount: amount, createdPayments: [createdPayment] };
+    } else {
+      result = applyDebtPaymentToSales(targets, {
+        method,
+        mixedCashAmount: Number(cashEl?.value || 0),
+        paidAt: new Date().toISOString(),
+        paidBy: state.currentUser?.username || '-',
+        cashBoxId: activeCash?.id || ''
       });
-    });
-    persist();
+    }
+    if (result.totalDebtAmount <= 0 || !result.createdPayments.length) { alert('La deuda seleccionada ya fue saldada.'); return; }
+    const expectedSalesState = new Map(targets.map((sale) => [String(sale.id || ''), { debtAmount: Number(sale.debtAmount || 0), paymentStatus: sale.paymentStatus || '' }]));
+    state.debtPayments.unshift(...result.createdPayments.reverse());
+    targets.forEach((sale) => { if (sale?.id) pendingDebtSaleIds.add(String(sale.id)); });
+    result.createdPayments.forEach((payment) => { if (payment?.id) pendingDebtPaymentIds.add(String(payment.id)); });
+    markModulesDirty(['operations'], 'debt-payment-local');
+    persist({ module: 'sale', sync: false });
+    pendingDebtSyncChanges = true;
+    refreshPendingSyncButtons();
+    console.info('[debt][persist]', { debtPaymentsCount: state.debtPayments?.length || 0 });
     renderDebtors();
+    renderSalesHistory();
     renderSummary();
-  renderSoldProductsList();
+    renderSoldProductsList();
     renderDebtPayments();
     overlay.remove();
+    try {
+      await commitCriticalCloudWrites(async (includeToken) => {
+        for (const sale of targets) {
+          if (!sale?.id) continue;
+          await cloudWritePath(`operations/sales/${encodeURIComponent(String(sale.id))}`, sale, { includeToken, method: 'PUT' });
+        }
+        for (const payment of result.createdPayments) {
+          if (!payment?.id) continue;
+          await cloudWritePath(`operations/debtPayments/${encodeURIComponent(String(payment.id))}`, payment, { includeToken, method: 'PUT' });
+        }
+        await cloudWritePath('operations/updatedAt', Date.now(), { includeToken, method: 'PUT' });
+      }, { reason: 'debt-payment', saleIds: targets.map((s) => s.id), paymentIds: result.createdPayments.map((p) => p.id) });
+      await pullFromCloud({ force: true, modules: ['operations'], reason: 'debt-payment-verify' });
+      const salesOk = [...expectedSalesState.entries()].every(([saleId, expected]) => {
+        const sale = (state.sales || []).find((s) => String(s.id || '') === String(saleId));
+        return sale && Number(sale.debtAmount || 0) === Number(expected.debtAmount || 0) && String(sale.paymentStatus || '') === String(expected.paymentStatus || '');
+      });
+      const paymentsOk = [...pendingDebtPaymentIds].every((paymentId) => (state.debtPayments || []).some((p) => p.id === paymentId));
+      if (!salesOk || !paymentsOk) throw new Error('Verificación post-guardado de deuda no consistente.');
+      pendingDebtSyncChanges = false;
+      pendingDebtSaleIds.clear();
+      pendingDebtPaymentIds.clear();
+      refreshPendingSyncButtons();
+      await showOperationSyncSuccessModal({
+        title: 'Deuda pagada correctamente',
+        message: 'Pago registrado, guardado y sincronizado en la nube correctamente.'
+      });
+    } catch (err) {
+      console.error('[debt][sync-after-pay] error', err);
+      pendingDebtSyncChanges = true;
+      refreshPendingSyncButtons();
+      alert('El pago se aplicó localmente, pero falló el guardado/sincronización en la nube.');
+    }
   });
 }
 
+function confirmSaleAnnulment(sale) {
+  return new Promise((resolve) => {
+    document.getElementById('annulSaleOverlay')?.remove();
+    const overlay = document.createElement('div');
+    overlay.id = 'annulSaleOverlay';
+    overlay.className = 'modal';
+    overlay.innerHTML = `<div class="modal-card"><h3>Anular venta</h3><p>¿Estás seguro de anular la venta?</p><p><strong>Pedido #${orderNumberLabel(sale?.orderNumber)}</strong></p><div class="grid2"><button id="cancelAnnulSaleBtn" class="secondary" type="button">Cancelar</button><button id="confirmAnnulSaleBtn" class="danger" type="button">Anular</button></div></div>`;
+    document.body.appendChild(overlay);
+    const close = (value) => { overlay.remove(); resolve(value); };
+    document.getElementById('cancelAnnulSaleBtn')?.addEventListener('click', () => close(false));
+    document.getElementById('confirmAnnulSaleBtn')?.addEventListener('click', () => close(true));
+  });
+}
+
+function showOperationSyncSuccessModal({ title = 'Operación exitosa', message = 'Guardado y sincronizado correctamente.' } = {}) {
+  return new Promise((resolve) => {
+    document.getElementById('opSyncSuccessOverlay')?.remove();
+    const overlay = document.createElement('div');
+    overlay.id = 'opSyncSuccessOverlay';
+    overlay.className = 'modal';
+    overlay.innerHTML = `<div class="modal-card"><h3>${escapeHtml(String(title || 'Operación exitosa'))}</h3><p>${escapeHtml(String(message || 'Guardado y sincronizado correctamente.'))}</p><div class="grid2"><button id="opSyncSuccessContinueBtn" class="primary" type="button">Continuar</button></div></div>`;
+    document.body.appendChild(overlay);
+    document.getElementById('opSyncSuccessContinueBtn')?.addEventListener('click', () => {
+      overlay.remove();
+      resolve();
+    });
+  });
+}
 
 function activeDebtPayments() {
   return (state.debtPayments || []).filter((p) => !p?.anulado);
@@ -3470,8 +4855,20 @@ function saleRecordForPayment(payment) {
   return state.sales.find((x) => x.id === payment.saleId) || state.deletedSales.find((x) => x.id === payment.saleId) || null;
 }
 
+function paymentOrdinalLabel(index = 1) {
+  const n = Math.max(1, Number(index || 1));
+  const labels = ['primer pago', 'segundo pago', 'tercer pago', 'cuarto pago', 'quinto pago', 'sexto pago', 'séptimo pago', 'octavo pago', 'noveno pago', 'décimo pago'];
+  return labels[n - 1] || `pago #${n}`;
+}
+
+function debtPaymentDetailText(payment, sale = null) {
+  if (payment?.detailLabel) return String(payment.detailLabel);
+  return sale?.items?.map((i) => `${i.name} x${i.qty}`).join(', ') || '-';
+}
+
 function renderDebtPayments() {
   if (!debtPaymentsTable) return;
+  console.info('[debt][render]', { mode: state.debtPaymentsView || 'history', paymentsCount: state.debtPayments?.length || 0 });
   state.debtPaymentsView = state.debtPaymentsView || 'history';
   state.activeDebtorPaymentsId = state.activeDebtorPaymentsId || '';
   if (debtPaymentsHistoryCard && !document.getElementById('debtPaymentsNav')) {
@@ -3500,7 +4897,7 @@ function renderDebtPayments() {
     debtPaymentsTable.innerHTML = filtered.length ? filtered.map((p) => {
       const sale = saleRecordForPayment(p);
       const person = state.people.find((x) => x.id === p.debtorId);
-      return `<tr><td>${personFullName(person) || '-'}</td><td>${new Date(p.paidAt).toLocaleString()}</td><td>${sale?.items?.map((i) => `${i.name} x${i.qty}`).join(', ') || '-'}</td><td>${money(p.amount)}</td><td>${p.paidBy || '-'}</td><td>${p.anulado ? 'ANULADO' : 'Archivado'}</td></tr>`;
+      return `<tr><td>${personFullName(person) || '-'}</td><td>${new Date(p.paidAt).toLocaleString()}</td><td>${debtPaymentDetailText(p, sale)}</td><td>${money(p.amount)}</td><td>${p.paidBy || '-'}</td><td>${p.anulado ? 'ANULADO' : 'Archivado'}</td></tr>`;
     }).join('') : '<tr><td colspan="6">Sin pagos archivados.</td></tr>';
     return;
   }
@@ -3534,7 +4931,7 @@ function renderDebtPayments() {
       const sale = saleRecordForPayment(p);
       const paidBy = p.paidBy || p.user || '-';
       const saleDate = p.saleCreatedAt || sale?.createdAt || '';
-      return `<tr><td>${saleDate ? new Date(saleDate).toLocaleString() : '-'}</td><td>${new Date(p.paidAt).toLocaleString()}</td><td>${sale?.items?.map((i) => `${i.name} x${i.qty}`).join(', ') || '-'}</td><td>${money(p.amount)}</td><td>${paidBy}</td><td><button class="secondary" data-archive-debt-pay="${p.id}" type="button">Archivar</button></td></tr>`;
+      return `<tr><td>${saleDate ? new Date(saleDate).toLocaleString() : '-'}</td><td>${new Date(p.paidAt).toLocaleString()}</td><td>${debtPaymentDetailText(p, sale)}</td><td>${money(p.amount)}</td><td>${paidBy}</td><td><button class="secondary" data-archive-debt-pay="${p.id}" type="button">Archivar</button></td></tr>`;
     }).join('') : '<tr><td colspan="6">Sin pagos para este deudor.</td></tr>';
     if (debtPaymentsTable && !document.getElementById('archiveDebtorHistoryBtn')) {
       const btn = document.createElement('button');
@@ -3571,43 +4968,46 @@ function renderDebtPayments() {
     const sale = saleRecordForPayment(p);
     const paidBy = p.paidBy || p.user || '-';
     const saleDate = p.saleCreatedAt || sale?.createdAt || '';
-    return `<tr><td>${saleDate ? new Date(saleDate).toLocaleString() : '-'}</td><td>${new Date(p.paidAt).toLocaleString()}</td><td>${sale?.items?.map((i) => `${i.name} x${i.qty}`).join(', ') || '-'}</td><td>${money(p.amount)}</td><td>${paidBy}</td></tr>`;
+    return `<tr><td>${saleDate ? new Date(saleDate).toLocaleString() : '-'}</td><td>${new Date(p.paidAt).toLocaleString()}</td><td>${debtPaymentDetailText(p, sale)}</td><td>${money(p.amount)}</td><td>${paidBy}</td></tr>`;
   }).join('') : '<tr><td colspan="5">Sin pagos realizados.</td></tr>';
 }
 
 
+function stripHeavyDataUrl(value) {
+  const raw = String(value || '');
+  if (!raw.startsWith('data:image/')) return value;
+  return '';
+}
+
+function sanitizeCloudPayload(payload, remotePayload = {}) {
+  const out = { ...payload };
+  out.settings = { ...(payload.settings || {}) };
+  if (out.settings.billing && typeof out.settings.billing === 'object') out.settings.billing = { ...out.settings.billing };
+  const remoteSettings = (remotePayload && typeof remotePayload === 'object') ? (remotePayload.settings || {}) : {};
+  const remoteBilling = (remoteSettings && typeof remoteSettings.billing === 'object') ? remoteSettings.billing : {};
+  if (isMeaningfullyEmpty(out.settings.logoDataUrl) && !isMeaningfullyEmpty(remoteSettings.logoDataUrl)) out.settings.logoDataUrl = remoteSettings.logoDataUrl;
+  if (out.settings.billing && isMeaningfullyEmpty(out.settings.billing.logoDataUrl) && !isMeaningfullyEmpty(remoteBilling.logoDataUrl)) out.settings.billing.logoDataUrl = remoteBilling.logoDataUrl;
+  out.products = (payload.products || []).map((p) => ({ ...p, imageDataUrl: stripHeavyDataUrl(p?.imageDataUrl) }));
+  out.categoryImages = Object.fromEntries(Object.entries(payload.categoryImages || {}).map(([k, v]) => {
+    const sanitized = stripHeavyDataUrl(v);
+    if (isMeaningfullyEmpty(sanitized) && !isMeaningfullyEmpty(remotePayload?.categoryImages?.[k])) return [k, remotePayload.categoryImages[k]];
+    return [k, sanitized];
+  }));
+  console.info('[cloud][images]', {
+    strippedMainLogo: Boolean(payload?.settings?.logoDataUrl && !out.settings.logoDataUrl),
+    strippedBillingLogo: Boolean(payload?.settings?.billing?.logoDataUrl && !out.settings?.billing?.logoDataUrl)
+  });
+  return out;
+}
+
 function snapshotPayload() {
-  return {
-    products: state.products,
-    sales: state.sales,
-    deletedSales: state.deletedSales,
-    cashClosings: state.cashClosings,
-    cashSession: state.cashSession,
-    users: state.users,
-    settings: state.settings,
-    categories: state.categories,
-    people: state.people,
-    stockConfig: state.stockConfig,
-    outflows: state.outflows,
-    debtPayments: state.debtPayments,
-    components: state.components,
-    componentLinks: state.componentLinks,
-    componentMoves: state.componentMoves,
-    cashBoxes: state.cashBoxes,
-    activeCashBoxId: state.activeCashBoxId || '',
-    systemStatus: state.systemStatus || 'CAJA_CERRADA',
-    forceLogoutAt: Number(state.forceLogoutAt || 0),
-    userSalesModes: state.userSalesModes || {},
-    touchUiConfigByUser: state.touchUiConfigByUser || {},
-    categoryImages: state.categoryImages || {},
-    orderCounters: state.orderCounters || {},
-    deletedRecordIds: state.deletedRecordIds || { cashClosings: [], sales: [] },
-    updatedAt: Date.now()
-  };
+  return cloudModulePayloadFromState();
 }
 
 
 function mergeByIdPreferRemote(remoteList = [], localList = [], tombstones = []) {
+  remoteList = normalizeCollectionToArray(remoteList);
+  localList = normalizeCollectionToArray(localList);
   const map = new Map();
   const removed = new Set((tombstones || []).map((x) => String(x)));
   (remoteList || []).forEach((item) => {
@@ -3624,8 +5024,87 @@ function mergeByIdPreferRemote(remoteList = [], localList = [], tombstones = [])
   return [...map.values()];
 }
 
+function mergeByIdPreferLocal(remoteList = [], localList = [], tombstones = []) {
+  remoteList = normalizeCollectionToArray(remoteList);
+  localList = normalizeCollectionToArray(localList);
+  const map = new Map();
+  const removed = new Set((tombstones || []).map((x) => String(x)));
+  remoteList.forEach((item) => {
+    if (!item?.id) return;
+    const key = String(item.id);
+    if (removed.has(key)) return;
+    map.set(key, item);
+  });
+  localList.forEach((item) => {
+    if (!item?.id) return;
+    const key = String(item.id);
+    if (removed.has(key)) return;
+    map.set(key, item);
+  });
+  return [...map.values()];
+}
+
+function recordTimestamp(item = {}) {
+  const modified = Number(item?.modifiedAt || 0);
+  const created = Date.parse(item?.createdAt || '') || 0;
+  const paid = Date.parse(item?.paidAt || '') || 0;
+  return Math.max(modified, created, paid, 0);
+}
+
+function mergeByIdLatest(remoteList = [], localList = [], tombstones = []) {
+  remoteList = normalizeCollectionToArray(remoteList);
+  localList = normalizeCollectionToArray(localList);
+  const map = new Map();
+  const removed = new Set((tombstones || []).map((x) => String(x)));
+  remoteList.forEach((item) => {
+    if (!item?.id) return;
+    const key = String(item.id);
+    if (removed.has(key)) return;
+    map.set(key, item);
+  });
+  localList.forEach((item) => {
+    if (!item?.id) return;
+    const key = String(item.id);
+    if (removed.has(key)) return;
+    const remote = map.get(key);
+    if (!remote || recordTimestamp(item) >= recordTimestamp(remote)) map.set(key, item);
+  });
+  return [...map.values()];
+}
+
+function mergeByIdLatestPreservingLocalOrder(remoteList = [], localList = [], tombstones = []) {
+  remoteList = normalizeCollectionToArray(remoteList);
+  localList = normalizeCollectionToArray(localList);
+  const removed = new Set((tombstones || []).map((x) => String(x)));
+  const remoteMap = new Map();
+  remoteList.forEach((item) => {
+    if (!item?.id) return;
+    const key = String(item.id);
+    if (removed.has(key)) return;
+    remoteMap.set(key, item);
+  });
+  const ordered = [];
+  const seen = new Set();
+  localList.forEach((item) => {
+    if (!item?.id) return;
+    const key = String(item.id);
+    if (removed.has(key) || seen.has(key)) return;
+    const remote = remoteMap.get(key);
+    ordered.push(!remote || recordTimestamp(item) >= recordTimestamp(remote) ? item : remote);
+    seen.add(key);
+  });
+  remoteList.forEach((item) => {
+    if (!item?.id) return;
+    const key = String(item.id);
+    if (removed.has(key) || seen.has(key)) return;
+    ordered.push(item);
+    seen.add(key);
+  });
+  return ordered;
+}
+
 function mergeDeletedRecordIds(remoteDeleted = {}, localDeleted = {}) {
-  const keys = ['cashClosings', 'sales'];
+  const keys = ['cashClosings', 'sales', 'products', 'categories'];
   const out = {};
   keys.forEach((key) => {
     const remote = Array.isArray(remoteDeleted?.[key]) ? remoteDeleted[key] : [];
@@ -3657,6 +5136,197 @@ function mergeCashBoxes(remoteBoxes = [], localBoxes = []) {
     else if (localScore === remoteScore && remote.estado !== 'CERRADA' && box.estado === 'CERRADA') map.set(key, box);
   });
   return [...map.values()];
+}
+
+function cashStateVersionOf(source = {}) {
+  const explicit = Number(source?.cashStateVersion || 0);
+  const updated = Number(source?.cashStateUpdatedAt || 0);
+  const general = Number(source?.generalCash?.updatedAt || 0);
+  return Math.max(explicit, updated, updated || general, 0);
+}
+
+function mergeCashOperationsState(remoteModule = {}, localModule = {}) {
+  const remoteVersion = cashStateVersionOf(remoteModule);
+  const localVersion = cashStateVersionOf(localModule);
+  const winner = localVersion > remoteVersion ? localModule : remoteModule;
+  const loser = winner === remoteModule ? localModule : remoteModule;
+  const mergedCashBoxes = mergeCashBoxes(remoteModule?.cashBoxes, localModule?.cashBoxes);
+  let activeCandidate = String(winner?.activeCashBoxId || '');
+  const openBoxes = normalizeCollectionToArray(mergedCashBoxes).filter((box) => box?.estado === 'ABIERTA');
+  const activeExists = openBoxes.some((box) => box?.id === activeCandidate);
+  if (!activeExists && openBoxes.length) {
+    activeCandidate = [...openBoxes].sort((a, b) => cashBoxTimelineValue(b) - cashBoxTimelineValue(a))[0]?.id || '';
+  }
+  return {
+    cashBoxes: collectionToObjectById(mergedCashBoxes),
+    activeCashBoxId: activeCandidate || '',
+    systemStatus: activeCandidate ? 'CAJA_ABIERTA' : 'CAJA_CERRADA',
+    cashSession: winner?.cashSession || loser?.cashSession || null,
+    generalCash: winner?.generalCash || loser?.generalCash || localModule?.generalCash || remoteModule?.generalCash || null,
+    generalClosings: Array.isArray(winner?.generalClosings) ? winner.generalClosings : (Array.isArray(loser?.generalClosings) ? loser.generalClosings : []),
+    cashStateVersion: Math.max(remoteVersion, localVersion, 0),
+    cashStateUpdatedAt: Math.max(Number(winner?.cashStateUpdatedAt || 0), Number(loser?.cashStateUpdatedAt || 0), 0)
+  };
+}
+
+async function syncToCloud(options = {}) {
+  if (!state.settings.firebaseDbUrl) return;
+  await ensureCloudSeedData();
+  console.info('[cloud][sync] inicio modular');
+  const makeSyncError = (code, stage, status, message, extra = {}) => Object.assign(new Error(message), { code, stage, status, ...extra });
+  const token = normalizedFirebaseToken();
+  const authModes = token ? [true, false] : [false];
+  let lastError = null;
+  const modules = Array.isArray(options.modules) && options.modules.length
+    ? options.modules
+    : ['config', 'catalog', 'operations', 'warehouse'];
+  const includeHistory = Boolean(options.includeHistory);
+  if (includeHistory && !modules.includes('history')) modules.push('history');
+
+  for (const includeToken of authModes) {
+    const modeLabel = includeToken ? 'token' : 'sin-token';
+    try {
+      const localModules = snapshotPayload();
+      for (const moduleName of modules) {
+        const path = CLOUD_MODULE_PATHS[moduleName];
+        if (!path) continue;
+        let remoteModule = {};
+        try {
+          remoteModule = await cloudReadPath(path, { includeToken }) || {};
+        } catch (err) {
+          if (includeToken && [401, 403].includes(Number(err?.status || 0))) throw err;
+          remoteModule = {};
+        }
+        const localModule = localModules[moduleName] || {};
+        let payload = { ...localModule };
+        if (moduleName === 'catalog') {
+          const mergedProducts = mergeByIdLatestPreservingLocalOrder(remoteModule?.products, localModule?.products, state.deletedRecordIds?.products);
+          payload.products = collectionToObjectById(mergedProducts);
+        } else if (moduleName === 'operations') {
+          const mergedSales = mergeByIdLatest(remoteModule?.sales, localModule?.sales, state.deletedRecordIds?.sales);
+          const mergedOutflows = mergeByIdLatest(remoteModule?.outflows, localModule?.outflows);
+          const mergedDebt = mergeByIdLatest(remoteModule?.debtPayments, localModule?.debtPayments);
+          const mergedWriteOffs = mergeByIdLatest(remoteModule?.stockWriteOffs, localModule?.stockWriteOffs);
+          const mergedCashState = mergeCashOperationsState(remoteModule, localModule);
+          payload.sales = collectionToObjectById(mergedSales);
+          payload.outflows = collectionToObjectById(mergedOutflows);
+          payload.debtPayments = collectionToObjectById(mergedDebt);
+          payload.stockWriteOffs = collectionToObjectById(mergedWriteOffs);
+          Object.assign(payload, mergedCashState);
+        } else if (moduleName === 'warehouse') {
+          const mergedComponents = mergeByIdLatest(remoteModule?.components, localModule?.components);
+          payload.components = collectionToObjectById(mergedComponents);
+          payload.componentLinks = { ...(remoteModule?.componentLinks || {}), ...(localModule?.componentLinks || {}) };
+        } else if (moduleName === 'history') {
+          const mergedDeleted = mergeDeletedRecordIds(remoteModule?.deletedRecordIds, localModule?.deletedRecordIds);
+          payload.deletedRecordIds = mergedDeleted;
+          payload.cashClosings = collectionToObjectById(mergeByIdPreferRemote(remoteModule?.cashClosings, localModule?.cashClosings, mergedDeleted.cashClosings));
+          payload.deletedSales = collectionToObjectById(mergeByIdPreferRemote(remoteModule?.deletedSales, localModule?.deletedSales));
+          payload.componentMoves = collectionToObjectById(mergeByIdPreferRemote(remoteModule?.componentMoves, localModule?.componentMoves));
+        } else if (moduleName === 'config') {
+          payload = sanitizeCloudPayload(payload, remoteModule);
+          const removedCategories = new Set((state.deletedRecordIds?.categories || []).map((x) => String(x).trim()).filter(Boolean));
+          if (removedCategories.size) {
+            payload.categories = (payload.categories || []).filter((category) => !removedCategories.has(String(category || '').trim()));
+            payload.categoryImages = Object.fromEntries(Object.entries(payload.categoryImages || {}).filter(([category]) => !removedCategories.has(String(category || '').trim())));
+          }
+        }
+        payload.updatedAt = Math.max(Number(payload.updatedAt || 0), Number(remoteModule?.updatedAt || 0), Date.now());
+        if (shouldBlockModuleWrite(moduleName, payload, remoteModule)) continue;
+        await cloudWritePath(path, payload, { includeToken, method: 'PUT' });
+        recordModuleWrite(moduleName, payload, options.reason || 'sync');
+        markModuleHydrated(moduleName, true, { source: 'local-sync' });
+      }
+      state.lastSyncAt = Date.now();
+      saveLocalState();
+      if (syncStatus) syncStatus.textContent = 'Sincronización enviada.';
+      if (token && !includeToken) console.info('[sync][token] Sincronización exitosa ignorando token (token innecesario o inválido).');
+      console.info('[cloud][sync] fin modular', { modules });
+      return;
+    } catch (err) {
+      lastError = err;
+      if (syncStatus) syncStatus.textContent = 'Error de sincronización.';
+      const status = Number(err?.status || 0);
+      if (includeToken && (status === 401 || status === 403)) {
+        console.warn('[sync][token] Fallo de autenticación con token. Reintentando sin token.', { status, message: err?.message });
+        continue;
+      }
+      console.error('[sync][rtdb] Error en sincronización.', { modeLabel, code: err?.code, status: err?.status, stage: err?.stage, message: err?.message });
+      console.error('[cloud][sync] error', { message: err?.message, code: err?.code, status: err?.status });
+      break;
+    }
+  }
+  throw lastError || new Error('sync unknown failure');
+}
+
+
+async function pullFromCloud(options = {}) {
+  if (!state.settings.firebaseDbUrl) return;
+  await ensureCloudSeedData();
+  console.info('[cloud][pull] inicio', { force: Boolean(options.force), modules: options.modules || 'default' });
+  const now = Date.now();
+  if (!options.force && (now - lastCloudPullAt) < CLOUD_PULL_MIN_INTERVAL_MS) return;
+  if (cloudPullInFlight) return cloudPullInFlight;
+  cloudPullInFlight = (async () => {
+  try {
+    lastCloudPullAt = Date.now();
+    const modules = Array.isArray(options.modules) && options.modules.length
+      ? options.modules
+      : ['config', 'catalog', 'operations', 'warehouse'];
+    if (Boolean(options.includeHistory) && !modules.includes('history')) modules.push('history');
+    const token = normalizedFirebaseToken();
+    const authModes = token ? [true, false] : [false];
+    let modulesData = null;
+    for (const includeToken of authModes) {
+      try {
+        const next = {};
+        let changedAny = false;
+        for (const moduleName of modules) {
+          const path = CLOUD_MODULE_PATHS[moduleName];
+          if (!path) continue;
+          const localStamp = getModuleUpdatedAt(moduleName);
+          if (!options.force) {
+            const stamp = await fetchModuleUpdatedAt(moduleName, { includeToken, reason: options.reason || 'pull' });
+            if (stamp && stamp <= localStamp) {
+              console.info('[cloud][pull-skip]', { moduleName, stamp, localStamp, reason: options.reason || 'pull' });
+              continue;
+            }
+          }
+          next[moduleName] = await cloudReadPath(path, { includeToken }) || {};
+          recordModuleRead(moduleName, next[moduleName], options.reason || 'pull');
+          markModuleHydrated(moduleName, true, { source: 'cloud-pull' });
+          changedAny = true;
+        }
+        if (!changedAny && !options.force) return;
+        modulesData = next;
+        break;
+      } catch (err) {
+        if (includeToken && [401, 403].includes(Number(err?.status || 0))) continue;
+        throw err;
+      }
+    }
+    if (!modulesData) throw new Error('[pull] No fue posible leer RTDB con token ni sin token.');
+    const currentModules = cloudModulePayloadFromState();
+    const mergedModules = { ...currentModules, ...modulesData };
+    applyCloudData(mergedModules);
+    console.info('[sale][pull]', { salesCount: Array.isArray(state.sales) ? state.sales.length : -1, activeCashBoxId: state.activeCashBoxId || '' });
+    console.info('[cloud][pull] fin', { updatedAt: state.lastSyncAt, modules });
+    console.info('[cloud] estado sincronizado', { activeCashBoxId: state.activeCashBoxId, systemStatus: state.systemStatus, modules });
+    const currentRoute = normalizeRoute(window.location.hash || '#home');
+    const inSettingsBranch = currentRoute === 'settings' || currentRoute.startsWith('settings/');
+    const inPosBranch = currentRoute.startsWith('pos/') || currentRoute === 'cash/closings';
+    if (state.currentUser && !getActiveCashBox() && !inSettingsBranch && !inPosBranch) {
+      maybeForceLogoutFromClosure();
+    }
+    applyRoute();
+  } catch (err) {
+    console.error('[sync][rtdb][pull] Fallo en pullFromCloud', { code: err?.code, status: err?.status, message: err?.message });
+  }
+  finally {
+    cloudPullInFlight = null;
+  }
+  })();
+  return cloudPullInFlight;
 }
 
 function renderHomeActions() {
@@ -3710,26 +5380,29 @@ function showLogin() {
     return;
   }
   loginScreen?.classList.remove('hidden');
-  if (loginScreen) loginScreen.style.display = 'block';
   homeScreen?.classList.add('hidden');
-  if (homeScreen) homeScreen.style.display = 'none';
   posScreen?.classList.add('hidden');
   stockScreen?.classList.add('hidden');
   warehouseScreen?.classList.add('hidden');
   if (loginUserInput) loginUserInput.value = '';
   if (loginPassInput) loginPassInput.value = '';
-  if (!state.currentUser) persistCurrentSession();
   setMsg(loginMessage, '');
 }
 function showHome() {
+  console.info('[nav][render-home]');
   loginScreen?.classList.add('hidden');
-  if (loginScreen) loginScreen.style.display = 'none';
   homeScreen?.classList.remove('hidden');
-  if (homeScreen) homeScreen.style.display = 'block';
   posScreen?.classList.add('hidden');
   stockScreen?.classList.add('hidden');
   warehouseScreen?.classList.add('hidden');
+  Array.from(homeScreen?.children || []).forEach((el) => el.classList.remove('hidden'));
   settingsCard?.classList.add('hidden');
+  console.info('[nav][screen-state]', {
+    loginHidden: loginScreen?.classList.contains('hidden'),
+    homeHidden: homeScreen?.classList.contains('hidden'),
+    posHidden: posScreen?.classList.contains('hidden'),
+    settingsHidden: settingsCard?.classList.contains('hidden')
+  });
   renderHomeActions();
   renderTabsByPermissions();
   renderCashStatus();
@@ -3749,63 +5422,55 @@ function switchToPos(tabId = 'ventas') {
   posScreen?.classList.remove('hidden');
   tabs.forEach((t) => t.classList.toggle('active', t.dataset.tab === tabId));
   panels.forEach((p) => p.classList.toggle('active', p.id === tabId));
-  if (tabId === 'cierres') renderCashClosings();
+  if (tabId === 'historial' || tabId === 'eliminadas') {
+    Promise.resolve().then(() => pullFromCloud({ modules: ['history'], force: true, includeHistory: true, reason: `tab-${tabId}` })).catch(() => {});
+  }
+  if (tabId === 'cierres') {
+    renderCashClosings();
+  }
 }
 
 async function handleLogin() {
   const username = loginUserInput?.value?.trim() || '';
   const password = loginPassInput?.value?.trim() || '';
-  console.info('LOGIN INICIADO', { username, firebaseReady, usersLoaded: Array.isArray(state.users) ? state.users.length : 0 });
   if (!username || !password) return setMsg(loginMessage, 'Ingresa usuario y contraseña para continuar.', false);
+  let cloudReadyAtLogin = false;
   try {
-    setMsg(loginMessage, 'Validando acceso en Firebase...');
-    await pullFromCloudWithTimeout(2500);
-    await ensureFirebaseSeedData();
-    const authSnap = await get(ref(firebaseDb, `${AUTH_USERS_PATH}/${username}`));
-    if (!authSnap.exists()) throw new Error('Usuario no existe');
-    const authUser = authSnap.val() || {};
-    if (String(authUser.password || '') !== password) throw new Error('Contraseña incorrecta');
-    let user = state.users.find((u) => String(u.username || '') === username);
-    if (!user) {
-      user = { username, password: authUser.password, role: authUser.role || 'admin', enabled: authUser.enabled !== false, permissions: defaultPermissions(), createdBy: 'firebase', createdAt: new Date().toISOString(), lastActivityAt: 0, lastLogoutAt: 0 };
-      state.users = [user, ...(state.users || []).filter((u) => u.username !== username)];
-      await set(ref(firebaseDb, `${FIREBASE_SHARED_NODE}/users/${username}`), { id: username, ...user });
-    }
-    if (user.enabled === false) throw new Error('Usuario inhabilitado por administrador.');
-    const now = Date.now();
-    user.lastActivityAt = now;
-    state.currentUser = { username: user.username, loginAt: now, lastActivityAt: now };
-    persistCurrentSession();
-    beginSessionWatcher();
-    if (loginUserInput) loginUserInput.value = '';
-    if (loginPassInput) loginPassInput.value = '';
-    setMsg(loginMessage, 'Ingreso exitoso.');
-    console.info('LOGIN EXITOSO', { username: user.username, currentUser: state.currentUser });
-    markUserActivity('login');
-    await update(ref(firebaseDb, `${FIREBASE_SHARED_NODE}/users/${username}`), { lastActivityAt: now, lastLoginAt: now });
-    persist();
-    if (loginScreen) loginScreen.style.display = 'none';
-    if (homeScreen) homeScreen.style.display = 'block';
-    maybeForceLogoutFromClosure();
-    if (!state.currentUser) return;
-    renderOrdersVisibility();
-    renderHomeActions();
-    navStack = ['home'];
-    navigateTo('home', { replace: true });
-    showHome();
-    renderSalesHistory();
-    if (!getActiveCashBox()) setMsg(homeMessage, 'La caja está cerrada. Espera a que un usuario autorizado la abra.', false);
-  } catch (error) {
-    console.error('[auth] login error', error);
-    setMsg(loginMessage, String(error?.message || error || 'No se pudo iniciar sesión.'), false);
+    await pullFromCloud({ force: true, modules: ['config', 'operations'], reason: 'login' });
+    cloudReadyAtLogin = true;
+  } catch {}
+  ensureUsers();
+  const user = state.users.find((u) => u.username === username && u.password === password);
+  if (!user) return setMsg(loginMessage, 'Usuario o contraseña incorrectos.', false);
+  if (user.enabled === false) return setMsg(loginMessage, 'Usuario inhabilitado por administrador.', false);
+  const now = Date.now();
+  user.lastActivityAt = now;
+  state.currentUser = { username: user.username, loginAt: now, lastActivityAt: now };
+  saveLocalState();
+  beginSessionWatcher();
+  if (loginUserInput) loginUserInput.value = '';
+  if (loginPassInput) loginPassInput.value = '';
+  setMsg(loginMessage, '');
+  markUserActivity('login');
+  persist();
+  cloudHydrated = cloudHydrated || cloudReadyAtLogin;
+  if (!cloudHydrated) {
+    console.error('[login] Sesión iniciada sin hidratación cloud. Se bloquearán operaciones compartidas hasta reconexión.', saleDebugContext());
   }
+  startFirebaseRealtimeListener();
+  maybeForceLogoutFromClosure();
+  if (!state.currentUser) return;
+  renderOrdersVisibility();
+  renderHomeActions();
+  showHome();
+  renderSalesHistory();
+  if (!getActiveCashBox()) setMsg(homeMessage, 'La caja está cerrada. Espera a que un usuario autorizado la abra.', false);
 }
 
 function logout(message = '') {
   const u = currentUserRecord();
   if (u) u.lastLogoutAt = Date.now();
   state.currentUser = null;
-  persistCurrentSession();
   persist();
   showLogin();
   if (message) setMsg(loginMessage, message, false);
@@ -3865,6 +5530,10 @@ async function startCashSession(openingAmount = 0) {
     return setMsg(homeMessage, 'Monto inicial inválido.', false);
   }
 
+  try { await pullCashStateFromCloud('open-cash-preflight'); } catch {}
+  if (getActiveCashBox()) {
+    return setMsg(homeMessage, 'Ya existe una caja abierta.', false);
+  }
   const nowIso = new Date().toISOString();
   const cashBox = {
     id: uid(),
@@ -3881,10 +5550,21 @@ async function startCashSession(openingAmount = 0) {
   state.activeCashBoxId = cashBox.id;
   state.systemStatus = 'CAJA_ABIERTA';
   state.cashSession = { id: cashBox.id, openedAt: cashBox.fecha_apertura, openingCash: parsedOpening, orderCounter: 1 };
+  state.generalCash = {
+    ...(state.generalCash || {}),
+    efectivo: parsedOpening,
+    qr: 0,
+    estado: 'ABIERTA',
+    openedAt: nowIso,
+    closedAt: '',
+    openedBy: state.currentUser?.username || '-',
+    closedBy: '',
+    updatedAt: bumpCashStateVersion('open-cash')
+  };
 
   closeStartCashModal();
   startCashCard?.classList.add('hidden');
-  persist();
+  persist({ sync: false });
   renderHomeActions();
   renderTabsByPermissions();
   renderCashStatus();
@@ -3897,6 +5577,7 @@ async function startCashSession(openingAmount = 0) {
   console.info('[cash] caja abierta correctamente', { cashBoxId: cashBox.id });
   setMsg(homeMessage, 'Caja abierta correctamente.');
   switchToPos('ventas');
+  Promise.resolve(syncCashStateToCloud('open-cash')).catch((err) => console.error('[cash] open sync failed', err));
 }
 
 async function closeCashSession() {
@@ -3907,12 +5588,17 @@ async function closeCashSession() {
   try {
     const activeCash = getActiveCashBox();
     if (!activeCash) return setMsg(homeMessage, 'No hay caja abierta para cerrar.', false);
+    try { await pullCashStateFromCloud('close-cash-preflight'); } catch {}
+    const refreshedActiveCash = getActiveCashBox();
+    if (!refreshedActiveCash) return setMsg(homeMessage, 'No hay caja abierta para cerrar.', false);
     if (!confirm('¿Estás seguro que deseas cerrar caja?')) return;
 
-    const daySales = salesForActiveCashBox().filter((sale) => !sale.carryOverDebt);
-    const dayOutflows = (state.outflows || []).filter((move) => move.cashBoxId === state.activeCashBoxId);
-    const dayDebtPayments = activeDebtPayments().filter((pay) => pay.cashBoxId === state.activeCashBoxId);
-    const dayDeletedSales = (state.deletedSales || []).filter((sale) => sale.cashBoxId === state.activeCashBoxId);
+    const currentCashBoxId = refreshedActiveCash.id;
+    const daySales = (state.sales || []).filter((sale) => sale.cashBoxId === currentCashBoxId && isCountableActiveSale(sale));
+    const dayOutflows = (state.outflows || []).filter((move) => move.cashBoxId === currentCashBoxId);
+    const dayDebtPayments = activeDebtPayments().filter((pay) => pay.cashBoxId === currentCashBoxId);
+    const dayDeletedSales = (state.deletedSales || []).filter((sale) => sale.cashBoxId === currentCashBoxId);
+    const dayStockWriteOffs = (state.stockWriteOffs || []).filter((row) => row.cashBoxId === currentCashBoxId);
 
     const totalsByMethod = daySales.reduce((acc, sale) => {
       const method = sale.payment || 'desconocido';
@@ -3920,36 +5606,43 @@ async function closeCashSession() {
       return acc;
     }, {});
 
+    const debtCashIn = dayDebtPayments.reduce((sum, pay) => sum + Number(pay.cashAmount || (pay.method === 'efectivo' ? pay.amount : 0) || 0), 0);
+    const debtQrIn = dayDebtPayments.reduce((sum, pay) => sum + Number(pay.qrAmount || (pay.method === 'qr' ? pay.amount : 0) || 0), 0);
     const cashIn = daySales.reduce((sum, sale) => sum + Number(sale.breakdown?.cash || 0), 0);
     const qrIn = daySales.reduce((sum, sale) => sum + Number(sale.breakdown?.qr || 0), 0);
     const debtPendingTotal = daySales.reduce((sum, sale) => sum + Number(sale.debtAmount || 0), 0);
 
-    activeCash.estado = 'CERRADA';
-    activeCash.fecha_cierre = new Date().toISOString();
-    activeCash.resumen = {
+    refreshedActiveCash.estado = 'CERRADA';
+    refreshedActiveCash.fecha_cierre = new Date().toISOString();
+    refreshedActiveCash.resumen = {
       total_ventas: daySales.reduce((sum, sale) => sum + Number(sale.total || 0), 0),
       total_transacciones: daySales.length,
       total_pedidos: daySales.length,
       total_por_metodo: totalsByMethod
     };
-    activeCash.usuario_cierre = state.currentUser?.username || '-';
+    refreshedActiveCash.usuario_cierre = state.currentUser?.username || '-';
 
     const closing = {
       id: uid(),
-      cashBoxId: activeCash.id,
-      openedAt: activeCash.fecha_apertura,
-      closedAt: activeCash.fecha_cierre,
-      openingCash: Number(activeCash.openingCash || 0),
+      cashBoxId: refreshedActiveCash.id,
+      openedAt: refreshedActiveCash.fecha_apertura,
+      closedAt: refreshedActiveCash.fecha_cierre,
+      usuario_apertura: refreshedActiveCash.usuario_apertura || state.currentUser?.username || '-',
+      usuario_cierre: refreshedActiveCash.usuario_cierre || state.currentUser?.username || '-',
+      openingCash: Number(refreshedActiveCash.openingCash || 0),
       cashIn,
       qrIn,
+      debtCashIn,
+      debtQrIn,
       debtPending: debtPendingTotal,
-      finalCashInBox: Number(activeCash.openingCash || 0) + cashIn,
+      finalCashInBox: Number(refreshedActiveCash.openingCash || 0) + cashIn + debtCashIn,
       salesCount: daySales.length,
       salesIds: daySales.map((sale) => sale.id),
       salesSnapshot: daySales.map((sale) => ({ ...sale })),
       deletedSalesSnapshot: dayDeletedSales.map((sale) => ({ ...sale })),
       outflowsSnapshot: dayOutflows.map((move) => ({ ...move })),
-      debtPaymentsSnapshot: dayDebtPayments.map((pay) => ({ ...pay }))
+      debtPaymentsSnapshot: dayDebtPayments.map((pay) => ({ ...pay })),
+      stockWriteOffsSnapshot: dayStockWriteOffs.map((row) => ({ ...row }))
     };
     state.cashClosings.unshift(closing);
 
@@ -3957,7 +5650,14 @@ async function closeCashSession() {
     state.systemStatus = 'CAJA_CERRADA';
     state.cashSession = null;
     state.forceLogoutAt = Date.now();
-    persist();
+    state.generalCash = {
+      ...(state.generalCash || {}),
+      estado: 'CERRADA',
+      closedAt: refreshedActiveCash.fecha_cierre,
+      closedBy: state.currentUser?.username || '-',
+      updatedAt: bumpCashStateVersion('close-cash')
+    };
+    persist({ sync: false });
 
     renderHomeActions();
     renderTabsByPermissions();
@@ -3965,64 +5665,38 @@ async function closeCashSession() {
     refreshFinancialViews();
     if (cashCloseResult) {
       cashCloseResult.className = 'ok';
-      cashCloseResult.textContent = `Cierre digital realizado: Ventas ${money(activeCash.resumen.total_ventas)} · Transacciones ${activeCash.resumen.total_transacciones}.`;
+      cashCloseResult.textContent = `Cierre digital realizado: Ventas ${money(refreshedActiveCash.resumen.total_ventas)} · Transacciones ${refreshedActiveCash.resumen.total_transacciones}.`;
     }
     switchToPos('ventas');
     showHome();
-    Promise.resolve(syncToCloud()).catch((err) => console.error('[cash] sync close failed', err));
     setMsg(homeMessage, 'La caja ha sido cerrada.', false);
+    Promise.resolve(syncCashStateToCloud('close-cash')).catch((err) => console.error('[cash] close sync failed', err));
+    Promise.resolve(saveCashClosingToCloud(closing)).catch((err) => console.error('[cash][closing] save failed', err));
   } catch (err) {
     console.error('[cash] closeCashSession error', err);
-    setMsg(homeMessage, 'No se pudo cerrar caja. Intenta nuevamente.', false);
+    setMsg(homeMessage, 'No se pudo cerrar caja.', false);
   }
 }
 
-async function commitSaleAtomically({ sale, cartItems, activeCashBoxId, stockEnabled }) {
-  const rootSaleRef = ref(firebaseDb, FIREBASE_SHARED_NODE);
-  const result = await runTransaction(rootSaleRef, (root) => {
-    const data = root && typeof root === 'object' ? root : {};
-    data.products = data.products || {};
-    data.sales = data.sales || {};
-    data.orderCounters = data.orderCounters || {};
-    data.updatedAt = Date.now();
-    const nextOrder = Number(data.orderCounters[activeCashBoxId] || 0) + 1;
-    data.orderCounters[activeCashBoxId] = nextOrder;
-    const finalizedSale = { ...sale, orderNumber: nextOrder };
-    if (stockEnabled) {
-      for (const item of cartItems) {
-        const product = data.products?.[item.id];
-        if (!product) return;
-        if (Number(product.stockCurrent || 0) < Number(item.qty || 0)) return;
-        product.stockCurrent = Number(product.stockCurrent || 0) - Number(item.qty || 0);
-        if (Array.isArray(product.combo) && product.combo.length) {
-          const req = comboComponentRequirements(product, item.qty);
-          for (const [componentId, neededQty] of req.entries()) {
-            const component = data.products?.[componentId];
-            if (!component || Number(component.stockCurrent || 0) < Number(neededQty || 0)) return;
-            component.stockCurrent = Number(component.stockCurrent || 0) - Number(neededQty || 0);
-          }
-        }
-      }
-    }
-    data.sales[finalizedSale.id] = finalizedSale;
-    return data;
-  }, { applyLocally: false });
-  if (!result.committed) throw new Error('La transacción de venta no fue confirmada por Firebase.');
-  const committed = result.snapshot.val() || {};
-  const committedSale = committed.sales?.[sale.id];
-  if (!committedSale) throw new Error('Firebase confirmó la transacción pero no devolvió la venta.');
-  state.orderCounters = committed.orderCounters || state.orderCounters || {};
-  return committedSale;
-}
-
 async function registerSale() {
+  await ensureCloudSeedData();
   if (isSubmittingSale) return;
   isSubmittingSale = true;
   if (createSaleBtn) createSaleBtn.disabled = true;
   touchSessionActivity();
   try {
-  if (!state.currentUser) return setMsg(saleMessage, 'Inicia sesión para registrar ventas.', false);
-  if (!getActiveCashBox()) return setMsg(saleMessage, 'Debes abrir caja para vender.', false);
+  console.info('[sale][init-check]', { cloudHydrated, bootCloudReady, bootListenerReady, bootCashReady, activeCashBoxId: state.activeCashBoxId || '' });
+  if ((state.sales || []).length < 2) console.info('[sale][first-run]', { salesCount: (state.sales || []).length });
+  if (!cloudHydrated || !bootCloudReady) {
+    await pullFromCloud({ force: true });
+    bootCloudReady = true;
+    cloudHydrated = true;
+  }
+  if (!bootListenerReady) startFirebaseRealtimeListener();
+  if (!state.currentUser) return setMsg(saleMessage, 'fallo porque currentUser es inválido', false);
+  if (!cloudHydrated) return setMsg(saleMessage, 'fallo porque el cliente no está hidratado desde cloud', false);
+  const activeCash = getActiveCashBox();
+  if (!activeCash) return setMsg(saleMessage, 'fallo porque no existe caja activa compartida', false);
   if (!state.currentCart.length) return setMsg(saleMessage, 'Añade productos antes de generar la venta.', false);
   const totals = saleTotals();
   const payment = paymentType?.value || 'efectivo';
@@ -4048,7 +5722,9 @@ async function registerSale() {
   if (payment === 'medio_pago') {
     debtorId = partialPersonSelect?.value || '';
     if (!debtorId) return setMsg(saleMessage, 'Selecciona una persona para registrar el medio pago.', false);
-    const paid = Math.max(0, Number(partialPaidAmount?.value || 0));
+    const paidRaw = Number(partialPaidAmount?.value || 0);
+    if (Number.isNaN(paidRaw) || paidRaw <= 0) return setMsg(saleMessage, 'Ingresa un monto pagado válido para medio pago.', false);
+    const paid = Math.min(Math.max(0, paidRaw), Number(totals.final || 0));
     const method = partialMethod?.value || 'efectivo';
     if (method === 'efectivo') breakdown.cash = paid;
     else breakdown.qr = paid;
@@ -4058,8 +5734,8 @@ async function registerSale() {
     for (const item of state.currentCart) {
       const p = state.products.find((x) => x.id === item.id);
       if (!p) continue;
-      if (Number(p.stockCurrent || 0) < Number(item.qty || 0)) return setMsg(saleMessage, `Stock insuficiente para ${item.name}.`, false);
-      if (Array.isArray(p.combo) && p.combo.length) {
+      if (isProductStockTracked(p) && Number(p.stockCurrent || 0) < Number(item.qty || 0)) return setMsg(saleMessage, `Stock insuficiente para ${item.name}.`, false);
+      if (isProductStockTracked(p) && Array.isArray(p.combo) && p.combo.length) {
         const req = comboComponentRequirements(p, item.qty);
         const missing = [...req.entries()].find(([componentId, neededQty]) => {
           const component = state.products.find((x) => x.id === componentId);
@@ -4074,15 +5750,69 @@ async function registerSale() {
   }
   const deliveryItems = [];
   state.currentCart.forEach((item) => { for (let i = 0; i < item.qty; i += 1) deliveryItems.push({ name: formatProductWithComboText(item), delivered: false, deliveredBy: '' }); });
-  const activeCashBoxId = state.activeCashBoxId;
-  const saleDraft = { id: uid(), cashBoxId: activeCashBoxId, orderNumber: null, createdAt: new Date().toISOString(), user: state.currentUser.username, items: state.currentCart.map((i) => ({ ...i })), total: totals.final, payment, breakdown, debtAmount, debtorId, paymentStatus: debtAmount > 0 ? 'pendiente' : 'realizado', orderStatus: 'pendiente', deliveryItems, carryOverDebt: false };
-  const sale = await commitSaleAtomically({ sale: saleDraft, cartItems: state.currentCart.map((i) => ({ ...i })), activeCashBoxId, stockEnabled: isStockEnabled() });
+  const activeCashBoxId = activeCash.id;
+  let orderNumber = 0;
+  try {
+    orderNumber = await reserveNextOrderNumber(activeCashBoxId);
+    console.info('[sale][order-number]', { orderNumber, activeCashBoxId });
+  } catch (err) {
+    console.error('[sale] fallo al reservar correlativo', { message: err?.message, code: err?.code, status: err?.status, context: saleDebugContext({ activeCashBoxId }) });
+    return setMsg(saleMessage, 'fallo al reservar correlativo', false);
+  }
+  const sale = { id: uid(), cashBoxId: activeCashBoxId, orderNumber, createdAt: new Date().toISOString(), modifiedAt: Date.now(), user: state.currentUser.username, items: state.currentCart.map((i) => ({ ...i })), total: totals.final, payment, breakdown, debtAmount, debtorId, paymentStatus: debtAmount > 0 ? 'pendiente' : 'realizado', orderStatus: 'pendiente', deliveryItems, carryOverDebt: false };
+  console.info('[sale][create] Venta generada', saleDebugContext({ saleId: sale.id, sale, orderCounters: state.orderCounters }));
   sale.invoiceSnapshot = buildInvoiceData(sale);
-  await update(ref(firebaseDb, `${FIREBASE_SHARED_NODE}/sales/${sale.id}`), { invoiceSnapshot: sale.invoiceSnapshot, updatedAt: Date.now() });
-  await set(ref(firebaseDb, `${SALES_PATH}/${sale.id}`), { ...sale, invoiceSnapshot: sale.invoiceSnapshot, updatedAt: Date.now() });
+  if (isStockEnabled()) {
+    for (const item of state.currentCart) {
+      const p = state.products.find((x) => x.id === item.id);
+      if (!p) continue;
+      if (!isProductStockTracked(p)) continue;
+      const next = Number(p.stockCurrent || 0) - Number(item.qty || 0);
+      p.stockCurrent = next;
+      console.info('[sale][stock]', { saleId: sale.id, productId: p.id, stockCurrent: next });
+      if (next <= productStockMin(p)) console.warn('[stock] Producto con stock mínimo', p.name, next);
+      if (Array.isArray(p.combo) && p.combo.length) {
+        const req = comboComponentRequirements(p, item.qty);
+        req.forEach((neededQty, componentId) => {
+          const component = state.products.find((x) => x.id === componentId);
+          if (!component) return;
+          const cNext = Number(component.stockCurrent || 0) - Number(neededQty || 0);
+          component.stockCurrent = cNext;
+          if (cNext <= productStockMin(component)) console.warn('[stock] Producto con stock mínimo', component.name, cNext);
+        });
+      }
+    }
+  }
   applyWarehouseImpactFromSaleItems(sale.items, { reverse: false, saleId: `#${orderNumberLabel(sale.orderNumber)}` });
+  state.sales.unshift(sale);
   state.currentCart = [];
-  await syncToCloud();
+  persist({ sync: false, module: 'sale' });
+  let confirmed = false;
+  try {
+    console.info('[sale][before-commit]', { saleId: sale.id, orderNumber: sale.orderNumber, cashBoxId: sale.cashBoxId, activeCashBoxId: state.activeCashBoxId || '', user: sale.user, payment: sale.payment, total: sale.total, inStateSales: state.sales.some((x) => x.id === sale.id) });
+    await commitSaleToFirebaseTransaction(sale);
+    await pullFromCloud({ force: true, modules: ['operations', 'catalog'] });
+    const inState = (state.sales || []).some((x) => x.id === sale.id);
+    const inHistory = salesForActiveCashBox().some((x) => x.id === sale.id);
+    const totals = saleTotals();
+    console.info('[sale][success-gate]', { saleId: sale.id, inState, inHistory, totalAfterPull: totals.final, activeCashBoxId: state.activeCashBoxId || '' });
+    if (!inState || !inHistory) throw new Error('sale success-gate failed');
+    confirmed = true;
+    Promise.resolve().then(() => syncToCloud({ modules: ['operations', 'catalog'] })).catch((err) => console.warn('[sale][sync] post-confirm sync warning', err));
+  } catch (err) {
+    if (String(err?.code || '').startsWith('RTDB_HTTP_')) console.error('[sale][sync][rtdb] fallo al confirmar venta en RTDB', { error: err, context: saleDebugContext({ saleId: sale.id }) });
+    else console.error('[sale][sync] fallo al confirmar venta en RTDB', { error: err, context: saleDebugContext({ saleId: sale.id }) });
+  }
+  if (!confirmed) {
+    console.error('[sale][rollback]', { saleId: sale.id, orderNumber: sale.orderNumber });
+    state.sales = state.sales.filter((x) => x.id !== sale.id);
+    persist({ sync: false, module: 'sale' });
+    return setMsg(saleMessage, 'No se pudo confirmar la venta en la nube. Intenta nuevamente.', false);
+  }
+  setTimeout(() => {
+    const exists = (state.sales || []).some((x) => x.id === sale.id);
+    if (!exists) console.error('[sale][lost-detection]', { saleId: sale.id, orderNumber: sale.orderNumber, activeCashBoxId: state.activeCashBoxId || '' });
+  }, 1200);
   renderCart();
   renderOrders(false);
   setMsg(saleMessage, 'Venta registrada correctamente.');
@@ -4198,8 +5928,23 @@ function openQueuedOrdersModal() {
 
 function renderStockPage() {
   if (!stockPageTable) return;
+  const head = stockPageTable.closest('table')?.querySelector('thead tr');
+  if (head) head.innerHTML = '<th>Activo</th><th>Producto</th><th>Stock actual</th><th>Stock mínimo</th><th>Acción</th>';
   if (stockPageProductSelect) stockPageProductSelect.innerHTML = (state.products || []).map((p) => `<option value=\"${p.id}\">${p.name}</option>`).join('');
-  stockPageTable.innerHTML = (state.products || []).map((p) => `<tr><td>${p.name}</td><td>${Number(p.stockCurrent || 0)}</td><td><button class="secondary" data-stock-clear="${p.id}" type="button">Vaciar stock</button></td></tr>`).join('');
+  stockPageTable.innerHTML = (state.products || []).map((p) => `<tr><td><input type="checkbox" data-stock-toggle="${p.id}" ${p.stockEnabled !== false ? 'checked' : ''} /></td><td>${p.name}</td><td>${Number(p.stockCurrent || 0)}</td><td>${Number(p.stockMin ?? 0)}</td><td><button class="secondary" data-stock-edit-min="${p.id}" type="button">Editar mínimo</button> <button class="secondary" data-stock-writeoff="${p.id}" type="button">Dar de baja</button> <button class="secondary" data-stock-clear="${p.id}" type="button">Vaciar stock</button></td></tr>`).join('');
+  if (!document.getElementById('activateAllStocksBtn')) {
+    const btn = document.createElement('button');
+    btn.id = 'activateAllStocksBtn';
+    btn.className = 'secondary';
+    btn.type = 'button';
+    btn.textContent = 'Activar todos los stocks';
+    stockPageImportBtn?.insertAdjacentElement('beforebegin', btn);
+    btn.addEventListener('click', () => {
+      state.products.forEach((p) => { p.stockEnabled = true; });
+      persist({ sync: false });
+      renderStockPage();
+    });
+  }
 }
 
 function showStockPage() {
@@ -4216,6 +5961,56 @@ function showStockPage() {
   stockScreen?.classList.remove('hidden');
   if (stockPageStatus) stockPageStatus.textContent = `Stock activo · mínimo ${appConfig.stockMinimo}`;
   renderStockPage();
+}
+
+function openStockWriteOffModal(product) {
+  if (!product) return;
+  document.getElementById('stockWriteOffOverlay')?.remove();
+  const overlay = document.createElement('div');
+  overlay.id = 'stockWriteOffOverlay';
+  overlay.className = 'modal';
+  overlay.innerHTML = `<div class="modal-card"><h3>Dar de baja: ${escapeHtml(product.name || 'Producto')}</h3><div class="grid2"><label>Cantidad<input id="stockWriteOffQty" type="number" min="1" step="1" value="1" /></label><label>Motivo<input id="stockWriteOffReason" type="text" placeholder="Describe el motivo" /></label></div><div class="grid2"><button id="stockWriteOffCancelBtn" class="secondary" type="button">Cancelar</button><button id="stockWriteOffConfirmBtn" class="primary" type="button">Finalizar</button></div></div>`;
+  document.body.appendChild(overlay);
+  document.getElementById('stockWriteOffCancelBtn')?.addEventListener('click', () => overlay.remove());
+  document.getElementById('stockWriteOffConfirmBtn')?.addEventListener('click', () => {
+    const qty = Math.max(1, Number(document.getElementById('stockWriteOffQty')?.value || 0));
+    const reason = String(document.getElementById('stockWriteOffReason')?.value || '').trim();
+    if (!reason) return alert('Debes registrar el motivo de la baja.');
+    if (qty > Number(product.stockCurrent || 0)) return alert('La cantidad a dar de baja supera el stock disponible.');
+    product.stockCurrent = Number(product.stockCurrent || 0) - qty;
+    state.stockWriteOffs = Array.isArray(state.stockWriteOffs) ? state.stockWriteOffs : [];
+    state.stockWriteOffs.unshift({
+      id: uid(),
+      productId: product.id,
+      productName: product.name || 'Producto',
+      qty,
+      reason,
+      cost: Number(product.cost || 0),
+      cashBoxId: state.activeCashBoxId || '',
+      createdAt: new Date().toISOString(),
+      user: state.currentUser?.username || '-'
+    });
+    markModulesDirty(['catalog', 'operations'], 'stock-writeoff-local');
+    persist({ sync: false });
+    renderProducts();
+    renderSaleSelectors();
+    renderStockPage();
+    overlay.remove();
+    Promise.resolve().then(async () => {
+      const latest = state.stockWriteOffs[0];
+      if (!latest?.id) return;
+      await commitCriticalCloudWrites(async (includeToken) => {
+        await cloudWritePath(`operations/stockWriteOffs/${encodeURIComponent(String(latest.id))}`, latest, { includeToken, method: 'PUT' });
+        await cloudWritePath(`catalog/products/${encodeURIComponent(String(product.id))}`, product, { includeToken, method: 'PUT' });
+        await cloudWritePath('operations/updatedAt', Date.now(), { includeToken, method: 'PUT' });
+        await cloudWritePath('catalog/updatedAt', Date.now(), { includeToken, method: 'PUT' });
+      }, { reason: 'stock-writeoff', productId: product.id, writeOffId: latest.id });
+      await pullFromCloud({ force: true, modules: ['operations', 'catalog'], reason: 'stock-writeoff-verify' });
+    }).catch((err) => {
+      console.error('[stock][writeoff-sync] error', err);
+      alert('La baja de stock se aplicó localmente, pero falló la sincronización en la nube.');
+    });
+  });
 }
 
 function showWarehousePage() {
@@ -4352,9 +6147,11 @@ function ensureGlobalNavButtons() {
   backBtn.onclick = () => {
     const current = normalizeRoute(window.location.hash || '#home');
     if (current === 'home') return;
+    console.info('[nav][go-back]', { current, target: parentRoute(current) });
     navigateTo(parentRoute(current), { replace: true });
   };
   homeBtn.onclick = () => {
+    console.info('[nav][go-home]');
     navStack = ['home'];
     navigateTo('home', { replace: true });
   };
@@ -4403,11 +6200,13 @@ function ensureSettingsNavButtons() {
 }
 
 function renderRoute(route) {
+  console.info('[nav][route-change]', { route });
   if (!state.currentUser) return showLogin();
   if (route === 'home') { showHome(); enforceSingleActiveView(route); return; }
   if (route === 'stock') { showStockPage(); enforceSingleActiveView(route); return; }
   if (route === 'warehouse' || route === 'warehouse/gestion' || route === 'warehouse/movimientos' || route === 'warehouse/movimientos/archivados' || route.startsWith('warehouse/movimientos/archivados/')) { showWarehousePage(); enforceSingleActiveView(route); return; }
   if (route === 'settings') {
+    console.info('[nav][render-settings]');
     hideAllScreens();
     homeScreen?.classList.remove('hidden');
     homeScreen?.classList.add('settings-mode');
@@ -4452,6 +6251,7 @@ function renderRoute(route) {
 
 function applyRoute() {
   const route = normalizeRoute(window.location.hash);
+  console.info('[nav][route-change]', { route, source: 'applyRoute' });
   if (!state.currentUser) return showLogin();
   ensureGlobalNavButtons();
   if (!applyingRoute) {
@@ -4464,6 +6264,7 @@ function applyRoute() {
 
 function navigateTo(route, opts = {}) {
   const next = normalizeRoute(route);
+  console.info('[nav][route-change]', { route: next, source: 'navigateTo', replace: Boolean(opts.replace) });
   if (state.currentUser && next !== 'home' && !validateSessionPolicy({ silent: false })) return;
   ensureGlobalNavButtons();
   const current = navStack[navStack.length - 1] || 'home';
@@ -4490,10 +6291,12 @@ function showSettingsMenu() {
 }
 
 async function flushConfigChanges(successMsg) {
-  persist();
+  console.info('[settings][persist] flushConfigChanges', { successMsg });
+  persist({ module: 'settings' });
   applySettings();
   renderOrdersVisibility();
   try {
+    console.info('[settings][sync] sincronizando settings a cloud');
     await syncToCloud();
   } catch (err) {
     console.warn('[config] sync warning', err);
@@ -4503,6 +6306,7 @@ async function flushConfigChanges(successMsg) {
 
 async function saveMainSettings() {
   if (!hasPermission('accessSettings')) return setMsg(homeMessage, 'No tienes permiso para configurar pantalla principal.', false);
+  console.info('[settings][save] Guardando configuración principal (inicio)');
   state.settings.title1 = title1Input?.value?.trim() || 'Mi Cafetería';
   state.settings.title2 = title2Input?.value?.trim() || 'Pantalla principal';
   state.settings.posTitle = posTitleInput?.value?.trim() || 'POS Cafetería';
@@ -4518,12 +6322,18 @@ async function saveMainSettings() {
   state.settings.accentColor = accentColorInput?.value || '#1f7a5c';
   state.settings.bgColor = bgColorInput?.value || '#f7f7fb';
   state.settings.cardColor = cardColorInput?.value || '#ffffff';
+  console.info('[settings][save] state.settings actualizado', { title1: state.settings.title1, title2: state.settings.title2, hasLogo: Boolean(state.settings.logoDataUrl) });
   syncAppConfig();
   const file = logoInput?.files?.[0];
-  if (!file) return flushConfigChanges('Configuración guardada.');
+  if (!file) {
+    console.info('[settings][logo-save]', { action: 'no-new-file', hasLogo: Boolean(state.settings.logoDataUrl) });
+    return flushConfigChanges('Configuración guardada.');
+  }
+  console.info('[settings][logo-load]', { fileName: file.name, size: file.size });
   const reader = new FileReader();
   reader.onload = async () => {
     state.settings.logoDataUrl = String(reader.result || '');
+    console.info('[settings][logo-save]', { action: 'loaded', length: state.settings.logoDataUrl.length });
     await flushConfigChanges('Configuración guardada.');
     if (logoInput) logoInput.value = '';
   };
@@ -4544,6 +6354,7 @@ async function saveSalesConfigSettings() {
 
 async function saveBillingSettings() {
   if (!hasPermission('accessSettings')) return setMsg(homeMessage, 'No tienes permiso para facturación.', false);
+  console.info('[billing][save]', { hasCurrentLogo: Boolean(state.settings?.billing?.logoDataUrl) });
   const billing = normalizeBillingSettings();
   billing.enabled = Boolean(billingEnabledInput?.checked);
   billing.title = String(billingTitleInput?.value || billing.title || 'CAFETERIA SH82').trim() || 'CAFETERIA SH82';
@@ -4566,9 +6377,16 @@ async function saveBillingSettings() {
   billing.autoPrintEnabled = Boolean(billingAutoPrintInput?.checked);
   const applyPersist = async () => {
     state.settings.billing = { ...billing };
-    persist();
-    try { await syncToCloud(); } catch (err) { console.error('[billing] sync save failed', err); }
+    console.info('[billing][persist]', { hasLogo: Boolean(state.settings.billing.logoDataUrl) });
+    persist({ module: 'settings' });
+    try {
+      await syncToCloud();
+      console.info('[billing][sync]', { hasLogo: Boolean(state.settings.billing.logoDataUrl) });
+      await pullFromCloud({ force: true });
+      console.info('[billing][pull]', { hasLogo: Boolean(state.settings?.billing?.logoDataUrl) });
+    } catch (err) { console.error('[billing] sync save failed', err); }
     applySettings();
+    console.info('[billing][logo-render]', { hasLogo: Boolean(state.settings?.billing?.logoDataUrl) });
     if (billingConfigStatus) billingConfigStatus.textContent = 'Configuración de facturación guardada y sincronizada.';
   };
   const file = billingLogoInput?.files?.[0];
@@ -4579,6 +6397,7 @@ async function saveBillingSettings() {
   const reader = new FileReader();
   reader.onload = async () => {
     billing.logoDataUrl = String(reader.result || '');
+    console.info('[billing][logo-save]', { length: billing.logoDataUrl.length });
     if (billingLogoInput) billingLogoInput.value = '';
     await applyPersist();
   };
@@ -4627,7 +6446,7 @@ function openComboCreatorModal() {
   const prodSel = document.getElementById('modalComboProd');
   const table = document.getElementById('modalComboTable');
   const totalEl = document.getElementById('modalComboTotal');
-  const cats = [...new Set(state.products.filter((p) => !p.hidden).map((p) => p.category))];
+  const cats = getOrderedCategories({ includeHidden: false }).filter((category) => state.products.some((p) => !p.hidden && p.category === category));
   if (catSel) catSel.innerHTML = cats.map((c) => `<option value="${c}">${c}</option>`).join('');
   const syncProd = () => {
     const cat = catSel?.value || cats[0] || '';
@@ -4672,7 +6491,7 @@ function openComboCreatorModal() {
     if (!name || price <= 0 || !state.comboBuilderItems.length) { alert('Completa nombre, precio y productos del combo.'); return; }
     if (!state.categories.includes('Combos')) state.categories.push('Combos');
     const ids = state.comboBuilderItems.flatMap((x) => Array.from({ length: x.qty }).map(() => x.id));
-    state.products.push({ id: uid(), category: 'Combos', name, price, hidden: false, combo: ids });
+    state.products.push({ id: uid(), category: 'Combos', name, cost: 0, price, hidden: false, combo: ids });
     state.comboBuilderItems = [];
     persist();
     renderProducts();
@@ -4689,7 +6508,7 @@ function openProductEditModal(productId) {
   const overlay = document.createElement('div');
   overlay.id = 'editProductOverlay';
   overlay.className = 'modal';
-  overlay.innerHTML = `<div class="modal-card"><h3>Editar producto</h3><div class="grid3"><label>Categoría<select id="editProdCategory">${(state.categories || []).map((c) => `<option value="${c}">${c}</option>`).join('')}</select></label><label>Producto<input id="editProdName" type="text" value="${p.name}" /></label><label>Precio<input id="editProdPrice" type="number" min="0.01" step="0.01" value="${Number(p.price || 0).toFixed(2)}" /></label></div><div class="grid2"><button id="saveEditProdBtn" class="primary" type="button">Guardar</button><button id="cancelEditProdBtn" class="secondary" type="button">Cancelar</button></div></div>`;
+  overlay.innerHTML = `<div class="modal-card"><h3>Editar producto</h3><div class="grid4"><label>Categoría<select id="editProdCategory">${(state.categories || []).map((c) => `<option value="${c}">${c}</option>`).join('')}</select></label><label>Producto<input id="editProdName" type="text" value="${p.name}" /></label><label>Costo<input id="editProdCost" type="number" min="0" step="0.01" value="${Number(p.cost || 0).toFixed(2)}" /></label><label>Precio<input id="editProdPrice" type="number" min="0.01" step="0.01" value="${Number(p.price || 0).toFixed(2)}" /></label></div><div class="grid2"><button id="saveEditProdBtn" class="primary" type="button">Guardar</button><button id="cancelEditProdBtn" class="secondary" type="button">Cancelar</button></div></div>`;
   document.body.appendChild(overlay);
   const cat = document.getElementById('editProdCategory');
   if (cat) cat.value = p.category || 'Todos';
@@ -4697,10 +6516,12 @@ function openProductEditModal(productId) {
   document.getElementById('saveEditProdBtn')?.addEventListener('click', () => {
     const name = document.getElementById('editProdName')?.value?.trim() || '';
     const category = document.getElementById('editProdCategory')?.value || 'Todos';
+    const cost = Math.max(0, Number(document.getElementById('editProdCost')?.value || 0));
     const price = Number(document.getElementById('editProdPrice')?.value || 0);
     if (!name || price <= 0) return;
     p.name = name;
     p.category = category;
+    p.cost = cost;
     p.price = price;
     if (!state.categories.includes(category)) state.categories.push(category);
     persist();
@@ -4717,9 +6538,9 @@ function wireEvents() {
   document.addEventListener('keydown', touchSessionActivity);
   document.addEventListener('pointerdown', touchSessionActivity);
 
-  loginBtn?.addEventListener('click', () => { console.info('CLICK DETECTADO'); handleLogin(); });
-  loginUserInput?.addEventListener('keydown', (e) => { if (e.key === 'Enter') { console.info('CLICK DETECTADO'); handleLogin(); } });
-  loginPassInput?.addEventListener('keydown', (e) => { if (e.key === 'Enter') { console.info('CLICK DETECTADO'); handleLogin(); } });
+  loginBtn?.addEventListener('click', handleLogin);
+  loginUserInput?.addEventListener('keydown', (e) => { if (e.key === 'Enter') handleLogin(); });
+  loginPassInput?.addEventListener('keydown', (e) => { if (e.key === 'Enter') handleLogin(); });
   logoutBtn?.addEventListener('click', logout);
   posLogoutBtn?.addEventListener('click', logout);
   startCashBtn?.addEventListener('click', () => { settingsCard?.classList.add('hidden'); openStartCashModal(); });
@@ -4808,7 +6629,7 @@ function wireEvents() {
     renderBillingPreview();
   });
   openDatabaseConfigBtn?.classList.add('hidden');
-  syncNowBtn?.addEventListener('click', async () => { try { await syncToCloud(); if (syncStatus) syncStatus.textContent = 'Sincronizado con Firebase.'; } catch {} });
+  syncNowBtn?.addEventListener('click', async () => { try { await syncToCloud({ includeHistory: true, modules: ['config', 'catalog', 'operations', 'warehouse', 'history'] }); if (syncStatus) syncStatus.textContent = 'Sincronizado con Firebase.'; } catch {} });
   backFromMainConfigBtn?.addEventListener('click', () => navigateTo(parentRoute(normalizeRoute(window.location.hash || '#home')), { replace: true }));
   backFromUsersConfigBtn?.addEventListener('click', () => navigateTo(parentRoute(normalizeRoute(window.location.hash || '#home')), { replace: true }));
   backFromDatabaseConfigBtn?.addEventListener('click', () => navigateTo(parentRoute(normalizeRoute(window.location.hash || '#home')), { replace: true }));
@@ -4893,31 +6714,37 @@ function wireEvents() {
     e.preventDefault();
     const category = productCategory?.value || '';
     const name = productName?.value?.trim() || '';
+    const cost = Math.max(0, Number(productCost?.value || 0));
     const price = Number(productPrice?.value || 0);
     if (!category || !name || price <= 0) return;
-    state.products.push({ id: uid(), category, name, price, hidden: false });
+    state.products.push({ id: uid(), category, name, cost, price, hidden: false, sortOrder: nextProductSortOrderForCategory(category) });
     if (productName) productName.value = '';
+    if (productCost) productCost.value = '';
     if (productPrice) productPrice.value = '';
     persist();
     renderProducts();
     renderSaleSelectors();
+    renderTouchSaleUi();
   });
   addCategoryBtn?.addEventListener('click', () => {
     const cat = newCategoryInput?.value?.trim() || '';
     if (!cat || state.categories.includes(cat)) return;
+    restoreDeletedCategory(cat);
     state.categories.push(cat);
     if (newCategoryInput) newCategoryInput.value = '';
-    persist();
+    persist({ includeHistory: true });
     renderProducts();
     renderSaleSelectors();
+    renderTouchSaleUi();
   });
   createComboBtn?.addEventListener('click', () => {
     const name = comboNameInput?.value?.trim() || '';
     const price = Number(comboPriceInput?.value || 0);
     const ids = state.comboBuilderItems.length ? state.comboBuilderItems.map((p) => p.id) : (state.comboDraft.length ? state.comboDraft.map((p) => p.id) : Array.from(comboProductsSelect?.selectedOptions || []).map((o) => o.value));
     if (!name || price <= 0 || !ids.length) return;
+    restoreDeletedCategory('Combos');
     if (!state.categories.includes('Combos')) state.categories.push('Combos');
-    state.products.push({ id: uid(), category: 'Combos', name, price, hidden: false, combo: ids });
+    state.products.push({ id: uid(), category: 'Combos', name, cost: 0, price, hidden: false, combo: ids, sortOrder: nextProductSortOrderForCategory('Combos') });
     state.comboBuilderItems = [];
     if (comboItemsTable) comboItemsTable.innerHTML = '';
     if (comboNameInput) comboNameInput.value = '';
@@ -4926,6 +6753,7 @@ function wireEvents() {
     persist();
     renderProducts();
     renderSaleSelectors();
+    renderTouchSaleUi();
   });
   comboProductsSelect?.addEventListener('change', () => {
     const ids = Array.from(comboProductsSelect.selectedOptions).map((o) => o.value);
@@ -4933,6 +6761,26 @@ function wireEvents() {
     if (comboCalculatedTotal) comboCalculatedTotal.textContent = money(total);
   });
   productsTable?.addEventListener('click', (e) => {
+    const up = e.target.closest('button[data-prod-up]');
+    if (up) {
+      if (!moveProductWithinCategory(up.dataset.prodUp, -1)) return;
+      markModulesDirty(['catalog'], 'product-order-local');
+      persist();
+      renderProducts();
+      renderSaleSelectors();
+      renderTouchSaleUi();
+      return;
+    }
+    const down = e.target.closest('button[data-prod-down]');
+    if (down) {
+      if (!moveProductWithinCategory(down.dataset.prodDown, 1)) return;
+      markModulesDirty(['catalog'], 'product-order-local');
+      persist();
+      renderProducts();
+      renderSaleSelectors();
+      renderTouchSaleUi();
+      return;
+    }
     const edit = e.target.closest('button[data-prod-edit]');
     if (edit) {
       openProductEditModal(edit.dataset.prodEdit);
@@ -4946,6 +6794,7 @@ function wireEvents() {
       persist();
       renderProducts();
       renderSaleSelectors();
+      renderTouchSaleUi();
       return;
     }
     const upImg = e.target.closest('button[data-prod-img]');
@@ -4976,13 +6825,37 @@ function wireEvents() {
     }
     const del = e.target.closest('button[data-prod-del]');
     if (!del) return;
-    state.products = state.products.filter((p) => p.id !== del.dataset.prodDel);
-    persist();
+    const removedId = String(del.dataset.prodDel || '');
+    if (!removedId) return;
+    state.products = state.products.filter((p) => p.id !== removedId);
+    state.deletedRecordIds = state.deletedRecordIds || { cashClosings: [], sales: [], products: [], categories: [] };
+    if (!Array.isArray(state.deletedRecordIds.products)) state.deletedRecordIds.products = [];
+    if (!state.deletedRecordIds.products.includes(removedId)) state.deletedRecordIds.products.push(removedId);
+    persist({ includeHistory: true });
     renderProducts();
     renderSaleSelectors();
+    renderTouchSaleUi();
   });
 
   categoriesTable?.addEventListener('click', (e) => {
+    const up = e.target.closest('button[data-cat-up]');
+    if (up) {
+      if (!moveCategory(up.dataset.catUp, -1)) return;
+      persist();
+      renderProducts();
+      renderSaleSelectors();
+      renderTouchSaleUi();
+      return;
+    }
+    const down = e.target.closest('button[data-cat-down]');
+    if (down) {
+      if (!moveCategory(down.dataset.catDown, 1)) return;
+      persist();
+      renderProducts();
+      renderSaleSelectors();
+      renderTouchSaleUi();
+      return;
+    }
     const imgBtn = e.target.closest('button[data-cat-img]');
     if (imgBtn) { openImageUploadForCategory(imgBtn.dataset.catImg); return; }
     const retryCatImg = e.target.closest('button[data-img-retry-kind="category"]');
@@ -4994,13 +6867,18 @@ function wireEvents() {
       return;
     }
     const imgDelBtn = e.target.closest('button[data-cat-img-del]');
-    if (imgDelBtn) { const key = imgDelBtn.dataset.catImgDel || ''; const previous = state.categoryImages[key] || ''; delete state.categoryImages[key]; const ok = persistImageChange(() => { if (previous) state.categoryImages[key] = previous; }); if (!ok) return; renderProducts(); renderTouchSaleUi(); return; }
+    if (imgDelBtn) { const key = imgDelBtn.dataset.catImgDel || ''; const previous = state.categoryImages[key] || ''; delete state.categoryImages[key]; const ok = persistImageChange(() => { if (previous) state.categoryImages[key] = previous; }); if (!ok) return; renderProducts(); renderSaleSelectors(); renderTouchSaleUi(); return; }
     const b = e.target.closest('button[data-cat-del]');
     if (!b) return;
-    const cat = b.dataset.catDel;
+    const cat = String(b.dataset.catDel || '').trim();
+    if (!cat) return;
     state.categories = state.categories.filter((c) => c !== cat);
     state.products.forEach((p) => { if (p.category === cat) p.category = 'Todos'; });
-    persist();
+    if (state.categoryImages && Object.prototype.hasOwnProperty.call(state.categoryImages, cat)) delete state.categoryImages[cat];
+    state.deletedRecordIds = state.deletedRecordIds || { cashClosings: [], sales: [], products: [], categories: [] };
+    if (!Array.isArray(state.deletedRecordIds.categories)) state.deletedRecordIds.categories = [];
+    if (!state.deletedRecordIds.categories.includes(cat)) state.deletedRecordIds.categories.push(cat);
+    persist({ includeHistory: true });
     renderProducts();
     renderSaleSelectors();
   });
@@ -5010,15 +6888,33 @@ function wireEvents() {
   goSalidasBtn?.addEventListener('click', () => navigateTo('pos/salidas'));
   backFromConfigVentasBtn?.addEventListener('click', () => navigateTo(parentRoute(navStack[navStack.length - 1] || 'home'), { replace: true }));
 
-  addOutflowBtn?.addEventListener('click', () => {
+  addOutflowBtn?.addEventListener('click', async () => {
     if (!getActiveCashBox()) return;
     const amount = Number(outflowAmount?.value || 0);
     if (amount <= 0) return;
-    state.outflows.unshift({ id: uid(), cashBoxId: state.activeCashBoxId || '', createdAt: new Date().toISOString(), direction: outflowDirection?.value || 'salida', method: outflowMethod?.value || 'efectivo', description: outflowDescription?.value || '', amount, user: state.currentUser?.username || '-' });
+    const movement = { id: uid(), cashBoxId: state.activeCashBoxId || '', createdAt: new Date().toISOString(), direction: outflowDirection?.value || 'salida', method: outflowMethod?.value || 'efectivo', description: outflowDescription?.value || '', amount, user: state.currentUser?.username || '-' };
+    state.outflows.unshift(movement);
+    markModulesDirty(['operations'], 'outflow-local');
     if (outflowAmount) outflowAmount.value = '';
     if (outflowDescription) outflowDescription.value = '';
-    persist();
+    persist({ sync: false });
     refreshFinancialViews();
+    try {
+      await commitCriticalCloudWrites(async (includeToken) => {
+        await cloudWritePath(`operations/outflows/${encodeURIComponent(String(movement.id))}`, movement, { includeToken, method: 'PUT' });
+        await cloudWritePath('operations/updatedAt', Date.now(), { includeToken, method: 'PUT' });
+      }, { reason: 'outflow-create', movementId: movement.id });
+      await pullFromCloud({ force: true, modules: ['operations'], reason: 'outflow-create-verify' });
+      const exists = (state.outflows || []).some((move) => move?.id === movement.id);
+      if (!exists) throw new Error('Movimiento no encontrado tras verificación remota.');
+      await showOperationSyncSuccessModal({
+        title: 'Movimiento realizado exitosamente',
+        message: 'La entrada/salida fue guardada y sincronizada en la nube correctamente.'
+      });
+    } catch (err) {
+      console.error('[outflow][sync] error', err);
+      alert('El movimiento se aplicó localmente, pero falló el guardado/sincronización en la nube.');
+    }
   });
   outflowsTable?.addEventListener('click', (e) => {
     const b = e.target.closest('button[data-out-del]');
@@ -5029,7 +6925,20 @@ function wireEvents() {
   });
   createSaleBtn?.addEventListener('click', registerSale);
   saleSuccessContinueBtn?.addEventListener('click', hideSaleSuccessModal);
-  closingsMonthFilter?.addEventListener('change', renderCashClosings);
+  searchClosingsBtn?.addEventListener('click', () => {
+    const month = String(closingsMonthFilter?.value || '').trim();
+    searchCashClosingsByMonth(month).catch((err) => {
+      console.error('[cash][closings] search failed', err);
+      state.cashClosings = [];
+      state.cashClosingsLoaded = true;
+      state.cashClosingsSearchMonth = month;
+      renderCashClosings();
+    });
+  });
+  clearClosingsBtn?.addEventListener('click', () => {
+    if (closingsMonthFilter) closingsMonthFilter.value = '';
+    resetCashClosingsSearch({ render: false });
+  });
   tabs.forEach((tab) => tab.addEventListener('click', () => {
     const map = {
       ventas: 'pos/ventas',
@@ -5050,8 +6959,8 @@ function wireEvents() {
     if (!item) return;
     if (t.dataset.act === 'qty') {
       const requested = Math.max(1, Number(t.value || 1));
-      if (isStockEnabled()) {
-        const product = state.products.find((x) => x.id === item.id);
+      const product = state.products.find((x) => x.id === item.id);
+      if (isProductStockTracked(product)) {
         if (requested > Number(product?.stockCurrent || 0)) {
           alert('Cantidad supera el stock disponible.');
           t.value = String(item.qty || 1);
@@ -5077,13 +6986,42 @@ function wireEvents() {
   searchSalesBtn?.addEventListener('click', renderSalesHistory);
   salesOrderSearchInput?.addEventListener('input', renderSalesHistory);
   clearSalesFilterBtn?.addEventListener('click', () => { if (salesUserFilter) salesUserFilter.value=''; if (salesOrderSearchInput) salesOrderSearchInput.value=''; renderSalesHistory(); });
+  if (clearSalesFilterBtn && !document.getElementById('salesSaveChangesBtn')) {
+    const saveBtn = document.createElement('button');
+    saveBtn.id = 'salesSaveChangesBtn';
+    saveBtn.className = 'secondary';
+    saveBtn.type = 'button';
+    saveBtn.textContent = 'Guardar cambios';
+    saveBtn.style.marginLeft = '0.5rem';
+    clearSalesFilterBtn.insertAdjacentElement('afterend', saveBtn);
+    saveBtn.addEventListener('click', async () => {
+      if (!pendingSalesAnnulSyncChanges) return;
+      saveBtn.disabled = true;
+      try {
+        await syncToCloud({ modules: ['catalog', 'operations'], includeHistory: true, reason: 'sales-annul-manual-save' });
+        await pullFromCloud({ force: true, modules: ['catalog', 'operations', 'history'], reason: 'sales-annul-manual-verify', includeHistory: true });
+        const annulsOk = [...pendingAnnulSaleIds].every((saleId) => {
+          const sale = (state.sales || []).find((s) => s.id === saleId);
+          return sale && isSaleAnnulled(sale);
+        });
+        if (!annulsOk) throw new Error('Verificación post-guardado de anulaciones no consistente.');
+        pendingSalesAnnulSyncChanges = false;
+        pendingAnnulSaleIds.clear();
+      } catch (err) {
+        console.error('[sale][annul-manual-save] error', err);
+        pendingSalesAnnulSyncChanges = true;
+      } finally {
+        refreshPendingSyncButtons();
+      }
+    });
+  }
   openProductSalesReportBtn?.addEventListener('click', () => { productSalesReportCard?.classList.remove('hidden'); renderProductSalesReport(); });
   closeProductSalesReportBtn?.addEventListener('click', () => productSalesReportCard?.classList.add('hidden'));
   searchDeletedSalesBtn?.addEventListener('click', renderDeletedSales);
   clearDeletedSalesFilterBtn?.addEventListener('click', () => { if (deletedSalesFromDate) deletedSalesFromDate.value=''; if (deletedSalesToDate) deletedSalesToDate.value=''; renderDeletedSales(); });
   clearDeletedSalesBtn?.addEventListener('click', () => { state.deletedSales = []; persist(); renderDeletedSales(); });
   salesUserFilter?.addEventListener('change', renderSalesHistory);
-  salesTable?.addEventListener('click', (e) => {
+  salesTable?.addEventListener('click', async (e) => {
     const b = e.target.closest('button[data-sale-id]');
     if (!b) return;
     const sale = state.sales.find((s) => s.id === b.dataset.saleId);
@@ -5102,13 +7040,28 @@ function wireEvents() {
       return;
     }
     if (b.dataset.saleAct === 'del') {
-      if (!hasPermission('deleteSales')) return alert('No tienes permiso para eliminar ventas.');
+      if (!hasPermission('deleteSales')) return alert('No tienes permiso para anular ventas.');
+      const confirmed = await confirmSaleAnnulment(sale);
+      if (!confirmed) return;
+      if (isSaleAnnulled(sale)) return;
       const annulCount = annulDebtPaymentsBySaleId(sale.id, state.currentUser?.username || '-');
-      state.deletedSales.unshift({ ...sale, deletedAt: new Date().toISOString(), deletedBy: state.currentUser?.username || '-', annulledDebtPayments: annulCount });
+      const annulledAt = new Date().toISOString();
+      sale.saleStatus = 'ANULADA';
+      sale.deletedBy = state.currentUser?.username || '-';
+      sale.deletedAt = annulledAt;
+      sale.annulledAt = annulledAt;
+      if (Number(sale.debtAmount || 0) > 0) {
+        sale.debtAmount = 0;
+        sale.paymentStatus = 'anulado';
+      }
+      sale.modifiedAt = Date.now();
+      const deletedSnapshot = { ...sale, saleStatus: 'ANULADA', deletedAt: annulledAt, deletedBy: state.currentUser?.username || '-', annulledDebtPayments: annulCount };
+      state.deletedSales = (state.deletedSales || []).filter((x) => x.id !== sale.id);
+      state.deletedSales.unshift(deletedSnapshot);
       if (isStockEnabled()) {
         (sale.items || []).forEach((it) => {
           const p = state.products.find((x) => x.id === it.id || normalizeProductName(x.name) === normalizeProductName(it.name));
-          if (p) {
+          if (p && isProductStockTracked(p)) {
             p.stockCurrent = Number(p.stockCurrent || 0) + Number(it.qty || 0);
             if (Array.isArray(p.combo) && p.combo.length) {
               const req = comboComponentRequirements(p, it.qty);
@@ -5121,13 +7074,60 @@ function wireEvents() {
         });
       }
       applyWarehouseImpactFromSaleItems(sale.items, { reverse: true, saleId: `#${orderNumberLabel(sale.orderNumber)}` });
-      state.sales = state.sales.filter((x) => x.id !== sale.id);
-      state.deletedRecordIds = state.deletedRecordIds || { cashClosings: [], sales: [] };
-      if (!Array.isArray(state.deletedRecordIds.sales)) state.deletedRecordIds.sales = [];
-      if (!state.deletedRecordIds.sales.includes(sale.id)) state.deletedRecordIds.sales.push(sale.id);
-      persist();
+      markModulesDirty(['catalog', 'operations', 'history'], 'sale-annul-local');
+      persist({ includeHistory: true, sync: false });
+      pendingAnnulSaleIds.add(String(sale.id));
+      pendingSalesAnnulSyncChanges = true;
+      refreshPendingSyncButtons();
       refreshFinancialViews();
       renderWarehouse();
+      try {
+        const relatedAnnulledPayments = (state.debtPayments || []).filter((pay) => pay?.saleId === sale.id && pay?.anulado);
+        await commitCriticalCloudWrites(async (includeToken) => {
+          await cloudWritePath(`operations/sales/${encodeURIComponent(String(sale.id))}`, sale, { includeToken, method: 'PUT' });
+          for (const pay of relatedAnnulledPayments) {
+            if (!pay?.id) continue;
+            await cloudWritePath(`operations/debtPayments/${encodeURIComponent(String(pay.id))}`, pay, { includeToken, method: 'PUT' });
+          }
+          await cloudWritePath(`history/deletedSales/${encodeURIComponent(String(deletedSnapshot.id))}`, deletedSnapshot, { includeToken, method: 'PUT' });
+          if (isStockEnabled()) {
+            const touchedProducts = {};
+            (sale.items || []).forEach((item) => {
+              const product = (state.products || []).find((p) => String(p?.id || '') === String(item?.id || ''));
+              if (!product?.id) return;
+              touchedProducts[String(product.id)] = { ...product };
+              (product.combo || []).forEach((comboId) => {
+                const component = (state.products || []).find((p) => String(p?.id || '') === String(comboId || ''));
+                if (component?.id) touchedProducts[String(component.id)] = { ...component };
+              });
+            });
+            if (Object.keys(touchedProducts).length) {
+              await cloudWritePath('catalog/products', touchedProducts, { includeToken, method: 'PATCH' });
+              await cloudWritePath('catalog/updatedAt', Date.now(), { includeToken, method: 'PUT' });
+            }
+          }
+          await cloudWritePath('operations/updatedAt', Date.now(), { includeToken, method: 'PUT' });
+          await cloudWritePath('history/updatedAt', Date.now(), { includeToken, method: 'PUT' });
+        }, { reason: 'sale-annul', saleId: sale.id, deletedSnapshotId: deletedSnapshot.id });
+        await pullFromCloud({ force: true, modules: ['catalog', 'operations', 'history'], includeHistory: true, reason: 'sale-annul-verify' });
+        const verified = (() => {
+          const saleAfter = (state.sales || []).find((s) => s.id === sale.id);
+          return saleAfter && isSaleAnnulled(saleAfter);
+        })();
+        if (!verified) throw new Error('Anulación no persistida tras verificación remota.');
+        pendingSalesAnnulSyncChanges = false;
+        pendingAnnulSaleIds.delete(String(sale.id));
+        refreshPendingSyncButtons();
+        await showOperationSyncSuccessModal({
+          title: 'Venta anulada correctamente',
+          message: `Pedido N° ${orderNumberLabel(sale.orderNumber)} anulado, guardado y sincronizado en la nube correctamente.`
+        });
+      } catch (err) {
+        console.error('[sale][annul-sync] error', err);
+        pendingSalesAnnulSyncChanges = true;
+        refreshPendingSyncButtons();
+        alert('La venta se anuló localmente, pero falló el guardado/sincronización en la nube.');
+      }
       return;
     }
   });
@@ -5271,6 +7271,22 @@ function wireEvents() {
   });
 
   stockPageTable?.addEventListener('click', (e) => {
+    const editMinBtn = e.target.closest('button[data-stock-edit-min]');
+    if (editMinBtn) {
+      const product = state.products.find((p) => p.id === editMinBtn.dataset.stockEditMin);
+      if (!product) return;
+      const next = Number(prompt(`Stock mínimo para ${product.name}`, String(product.stockMin ?? 0)) || product.stockMin || 0);
+      product.stockMin = Math.max(0, next);
+      persist({ sync: false });
+      renderStockPage();
+      return;
+    }
+    const lowBtn = e.target.closest('button[data-stock-writeoff]');
+    if (lowBtn) {
+      const product = state.products.find((p) => p.id === lowBtn.dataset.stockWriteoff);
+      if (product) openStockWriteOffModal(product);
+      return;
+    }
     const b = e.target.closest('button[data-stock-clear]');
     if (!b) return;
     const product = state.products.find((p) => p.id === b.dataset.stockClear);
@@ -5281,6 +7297,14 @@ function wireEvents() {
     renderProducts();
     renderSaleSelectors();
     renderStockPage();
+  });
+  stockPageTable?.addEventListener('change', (e) => {
+    const cb = e.target.closest('input[data-stock-toggle]');
+    if (!cb) return;
+    const product = state.products.find((p) => p.id === cb.dataset.stockToggle);
+    if (!product) return;
+    product.stockEnabled = Boolean(cb.checked);
+    persist({ sync: false });
   });
   clearAllStockBtn?.addEventListener('click', () => {
     if (!confirm('¿Vaciar TODO el stock? Esta acción no se puede deshacer.')) return;
@@ -5301,7 +7325,7 @@ function wireEvents() {
     state.activeDebtorId = '';
   });
 
-  cashClosingsTable?.addEventListener('click', (e) => {
+  cashClosingsTable?.addEventListener('click', async (e) => {
     const del = e.target.closest('button[data-closing-del]');
     if (del && hasPermission('deleteClosings')) {
       const removedId = del.dataset.closingDel;
@@ -5309,8 +7333,15 @@ function wireEvents() {
       state.deletedRecordIds = state.deletedRecordIds || { cashClosings: [], sales: [] };
       if (!Array.isArray(state.deletedRecordIds.cashClosings)) state.deletedRecordIds.cashClosings = [];
       if (!state.deletedRecordIds.cashClosings.includes(removedId)) state.deletedRecordIds.cashClosings.push(removedId);
-      persist();
+      markModulesDirty(['history'], 'closing-delete-local');
+      persist({ includeHistory: true, sync: false });
       renderCashClosings();
+      try {
+        await syncToCloud({ modules: ['history'], includeHistory: true, reason: 'closing-delete' });
+        await pullFromCloud({ force: true, modules: ['history'], includeHistory: true, reason: 'closing-delete-verify' });
+      } catch (err) {
+        console.error('[closing][delete] sync error', err);
+      }
       return;
     }
     const pdf = e.target.closest('button[data-closing-pdf]');
@@ -5351,10 +7382,10 @@ function wireEvents() {
   });
 }
 
-}
-
 async function bootstrap() {
+  console.info('[boot][start]', { at: new Date().toISOString() });
   normalizeCloudSettings();
+  ['config', 'operations'].forEach((moduleName) => markModuleHydrated(moduleName, false, { source: 'bootstrap-reset' }));
   ensureUsers();
   ensureSeedData();
   ensureProductStockDefaults();
@@ -5363,29 +7394,106 @@ async function bootstrap() {
   if (!state.userSalesModes || typeof state.userSalesModes !== 'object') state.userSalesModes = {};
   if (!state.touchUiConfigByUser || typeof state.touchUiConfigByUser !== 'object') state.touchUiConfigByUser = {};
   if (!state.categoryImages || typeof state.categoryImages !== 'object') state.categoryImages = {};
+
+  (state.products || []).forEach((p) => {
+    if (p?.imageUrl && String(p.imageUrl).startsWith('idb:')) delete p.imageUrl;
+    if (!p?.imageUrl && p?.imageDataUrl && !String(p.imageDataUrl).startsWith('data:')) p.imageUrl = p.imageDataUrl;
+    if (p?.imageDataUrl && String(p.imageDataUrl).startsWith('idb:')) delete p.imageDataUrl;
+  });
+  Object.keys(state.categoryImages || {}).forEach((key) => {
+    const raw = String(state.categoryImages[key] || '');
+    if (raw.startsWith('idb:')) delete state.categoryImages[key];
+  });
+
   if (!state.orderCounters || typeof state.orderCounters !== 'object') state.orderCounters = {};
-  if (!state.deletedRecordIds || typeof state.deletedRecordIds !== 'object') state.deletedRecordIds = { cashClosings: [], sales: [] };
+  if (!state.deletedRecordIds || typeof state.deletedRecordIds !== 'object') state.deletedRecordIds = { cashClosings: [], sales: [], products: [], categories: [] };
   if (!Array.isArray(state.deletedRecordIds.cashClosings)) state.deletedRecordIds.cashClosings = [];
   if (!Array.isArray(state.deletedRecordIds.sales)) state.deletedRecordIds.sales = [];
+  if (!Array.isArray(state.deletedRecordIds.products)) state.deletedRecordIds.products = [];
+  if (!Array.isArray(state.deletedRecordIds.categories)) state.deletedRecordIds.categories = [];
   normalizeWarehouseData();
   normalizeDebtPaymentsData();
   normalizeCashState();
+  bootCashReady = Boolean(getActiveCashBox() || state.systemStatus === 'CAJA_CERRADA');
+  console.info('[boot][cash-ready]', { bootCashReady, activeCashBoxId: state.activeCashBoxId || '', systemStatus: state.systemStatus });
   syncAppConfig();
+  saveLocalState();
   applySettings();
   ensureSalesModeButton();
   wireEvents();
-  console.info('[auth] eventos de login conectados', { loginButtonBound: Boolean(loginBtn) });
+  const safeRun = (label, fn) => {
+    try { fn(); } catch (err) { console.error(`[boot][safe-run] ${label} failed`, err); }
+  };
   Promise.resolve().then(() => ensureJsPdfLibs()).catch(() => {});
-  window.addEventListener('hashchange', () => { if (applyingRoute) return; applyRoute(); });
-  try {
-    await initializeRealtimeState();
-    console.info('[firebase] conexión validada', { url: FIREBASE_DB_URL, node: FIREBASE_SHARED_NODE });
-  } catch (error) {
-    console.error('[firebase] inicialización falló', error);
-    setMsg(loginMessage, `Firebase no respondió correctamente: ${error.message || error}`, false);
-  }
+  safeRun('renderOrdersVisibility', () => renderOrdersVisibility());
   beginSessionWatcher();
-  showLogin();
+  safeRun('renderSaleSelectors', () => renderSaleSelectors());
+  safeRun('renderCart', () => renderCart());
+  safeRun('renderPeopleSelectors', () => renderPeopleSelectors());
+  safeRun('renderDebtors', () => renderDebtors());
+  safeRun('renderOrders', () => renderOrders(false));
+  safeRun('renderSalesHistory', () => renderSalesHistory());
+  safeRun('renderDeletedSales', () => renderDeletedSales());
+  safeRun('renderDebtPayments', () => renderDebtPayments());
+  safeRun('renderProducts', () => renderProducts());
+  safeRun('renderOutflows', () => renderOutflows());
+  safeRun('renderWarehouse', () => renderWarehouse());
+  safeRun('renderSummary', () => renderSummary());
+  safeRun('renderSoldProductsList', () => renderSoldProductsList());
+  let cloudBootHydrated = false;
+  const validSession = Boolean(state.currentUser && currentUserRecord());
+  window.addEventListener('storage', (e) => {
+    if (!e.key || !e.key.startsWith('cafeteria_') || document.hidden) return;
+    pullFromCloud({ modules: ['operations'], reason: 'storage' });
+  });
+  window.addEventListener('hashchange', () => { if (applyingRoute) return; applyRoute(); });
+  setInterval(() => {
+    if (document.hidden || firebaseRealtimeListener) return;
+    pullFromCloud({ modules: ['operations'], reason: 'polling' });
+  }, Math.max(CLOUD_POLL_INTERVAL_MS * 3, 25000));
+  document.addEventListener('visibilitychange', () => {
+    if (!document.hidden) pullFromCloud({ modules: ['operations'], reason: 'visibilitychange' });
+  });
+  window.addEventListener('online', () => {
+    pullFromCloud({ modules: ['operations', 'config'], reason: 'online' });
+    startFirebaseRealtimeListener();
+  });
+  Promise.resolve().then(() => migrateCategoryImageRefsToDataUrls()).catch(() => {});
+  try {
+    await ensureCloudSeedData({ force: true });
+    await pullFromCloud({ force: true, modules: MODULE_DEFAULT_BOOT_ORDER, reason: 'bootstrap-critical' });
+    cloudBootHydrated = MODULE_DEFAULT_BOOT_ORDER.every((moduleName) => isModuleHydrated(moduleName));
+    bootCloudReady = cloudBootHydrated;
+    console.info('[boot][cloud-ready]', { cloudBootHydrated, lastSyncAt: state.lastSyncAt || 0, bootModules: MODULE_DEFAULT_BOOT_ORDER });
+  } catch (err) {
+    console.error('[bootstrap] No se pudo hidratar módulos críticos al inicio. Se mantiene caché local.', { message: err?.message });
+  }
+  Promise.resolve().then(async () => {
+    try {
+      await pullFromCloud({ modules: MODULE_BACKGROUND_BOOT_ORDER, reason: 'bootstrap-background' });
+      console.info('[boot][background-ready]', { modules: MODULE_BACKGROUND_BOOT_ORDER });
+    } catch (err) {
+      console.warn('[boot][background-warning]', { message: err?.message });
+    }
+  });
+  if (!cloudBootHydrated && state.currentUser && validSession) {
+    try {
+      await pullFromCloud({ force: true, modules: ['operations'], reason: 'bootstrap-retry' });
+    } catch {}
+  }
+  cloudHydrated = cloudHydrated || cloudBootHydrated;
+  console.info('[boot][sales-ready]', { salesCount: state.sales?.length || 0, cloudHydrated });
+  startFirebaseRealtimeListener();
+  maybeForceLogoutFromClosure();
+  if (state.currentUser && validSession && validateSessionPolicy({ silent: true })) {
+    navStack = ['home'];
+    navigateTo(normalizeRoute(window.location.hash || '#home'), { replace: true });
+    if (!getActiveCashBox()) setMsg(homeMessage, 'La caja está cerrada. Espera a que un usuario autorizado la abra.', false);
+  } else {
+    state.currentUser = null;
+    persist({ sync: false });
+    showLogin();
+  }
 }
 
 bootstrap();
