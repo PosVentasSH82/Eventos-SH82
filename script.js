@@ -5191,11 +5191,31 @@ async function syncToCloud(options = {}) {
         const path = CLOUD_MODULE_PATHS[moduleName];
         if (!path) continue;
         let remoteModule = {};
+        let remoteReadFailed = false;
+        let remoteReadError = null;
         try {
           remoteModule = await cloudReadPath(path, { includeToken }) || {};
         } catch (err) {
           if (includeToken && [401, 403].includes(Number(err?.status || 0))) throw err;
-          remoteModule = {};
+          remoteReadFailed = true;
+          remoteReadError = err;
+          console.warn('[sync][module-read-failed]', {
+            moduleName,
+            path,
+            modeLabel,
+            status: Number(err?.status || 0) || null,
+            message: err?.message || 'remote read failed'
+          });
+        }
+        if (remoteReadFailed) {
+          setModuleMeta(moduleName, {
+            lastReadAt: Date.now(),
+            lastReadFailedAt: Date.now(),
+            lastReadStatus: Number(remoteReadError?.status || 0) || null,
+            lastReadError: String(remoteReadError?.message || 'remote read failed'),
+            lastReadReason: options.reason || 'sync'
+          });
+          continue;
         }
         const localModule = localModules[moduleName] || {};
         let payload = { ...localModule };
